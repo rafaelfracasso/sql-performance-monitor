@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Plano de Otimiza\u00e7\u00e3o: {{ plan_id }}</h2>
+    <p class="subtitle">Detalhes e gerenciamento do plano</p>
+</div>
+
+{% if plan %}
+<!-- Status do Plano -->
+<div class="plan-status-card">
+    <div class="plan-status-header">
+        <h3>Status do Plano</h3>
+        <span class="badge badge-large badge-{{ plan.status }}">{{ plan.status|upper }}</span>
+    </div>
+
+    <div class="plan-status-body">
+        <div class="status-grid">
+            <div class="status-item">
+                <span class="status-label">Gerado em:</span>
+                <span class="status-value">{{ plan.generated_at.strftime('%d/%m/%Y %H:%M') }}</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Execu\u00e7\u00e3o programada:</span>
+                <span class="status-value">{{ plan.execution_scheduled_at.strftime('%d/%m/%Y %H:%M') }}</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Per\u00edodo de an\u00e1lise:</span>
+                <span class="status-value">{{ plan.analysis_period_days }} dias</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Janela de veto expira:</span>
+                <span class="status-value" id="veto-countdown">{{ plan.veto_window_expires_at.strftime('%d/%m/%Y %H:%M') }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="plan-status-actions">
+        {% if plan.status == 'pending' %}
+        <button onclick="approvePlan()" class="btn btn-success">Aprovar e Executar Agora</button>
+        <button onclick="vetoPlan()" class="btn btn-danger">Vetar Plano Completo</button>
+        {% elif plan.status == 'vetoed' %}
+        <button onclick="unvetoPlan()" class="btn btn-primary">Remover Veto</button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Resumo de Otimiza\u00e7\u00f5es -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-value">{{ plan.total_optimizations }}</div>
+        <div class="metric-label">Total Otimiza\u00e7\u00f5es</div>
+    </div>
+
+    <div class="metric-card metric-success">
+        <div class="metric-value">{{ plan.auto_approved_count }}</div>
+        <div class="metric-label">Auto-Aprovadas</div>
+        <div class="metric-sublabel">Risco LOW/MEDIUM</div>
+    </div>
+
+    <div class="metric-card metric-warning">
+        <div class="metric-value">{{ plan.requires_review_count }}</div>
+        <div class="metric-label">Requer Revis\u00e3o</div>
+        <div class="metric-sublabel">Risco HIGH</div>
+    </div>
+
+    <div class="metric-card metric-error">
+        <div class="metric-value">{{ plan.blocked_count }}</div>
+        <div class="metric-label">Bloqueadas</div>
+        <div class="metric-sublabel">Risco CRITICAL</div>
+    </div>
+</div>
+
+<!-- Lista de Otimiza\u00e7\u00f5es -->
+<div class="section">
+    <div class="section-header">
+        <h3>Otimiza\u00e7\u00f5es Planejadas</h3>
+        <div class="filter-tabs">
+            <button class="tab active" onclick="filterOptimizations('all')">Todas</button>
+            <button class="tab" onclick="filterOptimizations('low')">LOW</button>
+            <button class="tab" onclick="filterOptimizations('medium')">MEDIUM</button>
+            <button class="tab" onclick="filterOptimizations('high')">HIGH</button>
+            <button class="tab" onclick="filterOptimizations('critical')">CRITICAL</button>
+        </div>
+    </div>
+
+    <div class="optimizations-list">
+        {% for opt in plan.optimizations %}
+        <div class="optimization-card risk-{{ opt.risk_level }}" data-risk="{{ opt.risk_level }}">
+            <div class="optimization-header">
+                <div class="optimization-title">
+                    <h4>{{ opt.description }}</h4>
+                    <span class="badge badge-{{ opt.type }}">{{ opt.type|replace('_', ' ')|upper }}</span>
+                </div>
+                <div class="optimization-badges">
+                    <span class="badge badge-priority-{{ opt.priority }}">{{ opt.priority|upper }}</span>
+                    <span class="badge badge-risk-{{ opt.risk_level }}">RISK: {{ opt.risk_level|upper }}</span>
+                </div>
+            </div>
+
+            <div class="optimization-body">
+                <div class="optimization-info">
+                    <div class="info-row">
+                        <span class="info-label">Tabela:</span>
+                        <span class="info-value">{{ opt.table }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Melhoria estimada:</span>
+                        <span class="info-value">{{ "%.1f"|format(opt.estimated_improvement_percent) }}%</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Dura\u00e7\u00e3o estimada:</span>
+                        <span class="info-value">{{ opt.estimated_duration_minutes }} minutos</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Auto-aprovado:</span>
+                        <span class="info-value">
+                            {% if opt.auto_approved %}
+                            <span class="badge badge-success">Sim</span>
+                            {% else %}
+                            <span class="badge badge-warning">N\u00e3o</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="optimization-sql">
+                    <div class="sql-header">
+                        <strong>Script SQL:</strong>
+                        <button onclick="copySQL('{{ opt.id }}')" class="btn btn-sm btn-secondary">Copiar</button>
+                    </div>
+                    <pre id="sql-{{ opt.id }}"><code>{{ opt.sql_script }}</code></pre>
+                </div>
+
+                {% if opt.rollback_script %}
+                <div class="optimization-sql">
+                    <div class="sql-header">
+                        <strong>Rollback Script:</strong>
+                        <button onclick="copySQL('rollback-{{ opt.id }}')" class="btn btn-sm btn-secondary">Copiar</button>
+                    </div>
+                    <pre id="sql-rollback-{{ opt.id }}"><code>{{ opt.rollback_script }}</code></pre>
+                </div>
+                {% endif %}
+
+                {% if opt.vetoed %}
+                <div class="veto-info">
+                    <strong>Vetado por:</strong> {{ opt.vetoed_by }} em {{ opt.vetoed_at.strftime('%d/%m/%Y %H:%M') }}<br>
+                    <strong>Motivo:</strong> {{ opt.veto_reason }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="optimization-footer">
+                <div class="execution-status">
+                    <span class="badge badge-{{ opt.execution_status }}">{{ opt.execution_status|upper }}</span>
+                </div>
+                <div class="optimization-actions">
+                    {% if not opt.vetoed and plan.status == 'pending' %}
+                    <button onclick="vetoItem('{{ opt.id }}')" class="btn btn-sm btn-danger">Vetar</button>
+                    {% elif opt.vetoed %}
+                    <button onclick="unvetoItem('{{ opt.id }}')" class="btn btn-sm btn-primary">Remover Veto</button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% else %}
+<div class="empty-state">
+    <p class="empty-message">Plano n\u00e3o encontrado.</p>
+    <a href="/plans" class="btn btn-primary">Voltar para Lista de Planos</a>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const planId = '{{ plan_id }}';
+
+// Fun\u00e7\u00e3o para copiar SQL
+function copySQL(elementId) {
+    const element = document.getElementById('sql-' + elementId);
+    const text = element.textContent;
+    navigator.clipboard.writeText(text).then(() => {
+        alert('SQL copiado para \u00e1rea de transfer\u00eancia!');
+    });
+}
+
+// Fun\u00e7\u00e3o para filtrar otimiza\u00e7\u00f5es
+function filterOptimizations(risk) {
+    const cards = document.querySelectorAll('.optimization-card');
+    const tabs = document.querySelectorAll('.tab');
+
+    tabs.forEach(tab => tab.classList.remove('active'));
+    event.target.classList.add('active');
+
+    cards.forEach(card => {
+        if (risk === 'all' || card.dataset.risk === risk) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+// Fun\u00e7\u00e3o para aprovar plano
+function approvePlan() {
+    const reason = prompt('Executar plano agora? Digite uma observa\u00e7\u00e3o (opcional):');
+    if (reason === null) return;
+
+    // Placeholder - implementar na Fase 2
+    alert('Funcionalidade de aprova\u00e7\u00e3o ser\u00e1 implementada na Fase 2.');
+}
+
+// Fun\u00e7\u00e3o para vetar plano
+function vetoPlan() {
+    const reason = prompt('Motivo do veto (m\u00ednimo 10 caracteres):');
+    if (!reason || reason.length < 10) {
+        alert('Motivo do veto deve ter no m\u00ednimo 10 caracteres.');
+        return;
+    }
+
+    // Placeholder - implementar na Fase 2
+    alert('Funcionalidade de veto ser\u00e1 implementada na Fase 2.');
+}
+
+// Fun\u00e7\u00e3o para remover veto do plano
+function unvetoPlan() {
+    if (!confirm('Deseja remover o veto deste plano?')) return;
+
+    // Placeholder - implementar na Fase 2
+    alert('Funcionalidade de remo\u00e7\u00e3o de veto ser\u00e1 implementada na Fase 2.');
+}
+
+// Fun\u00e7\u00e3o para vetar item
+function vetoItem(itemId) {
+    const reason = prompt('Motivo do veto para este item (m\u00ednimo 10 caracteres):');
+    if (!reason || reason.length < 10) {
+        alert('Motivo do veto deve ter no m\u00ednimo 10 caracteres.');
+        return;
+    }
+
+    // Placeholder - implementar na Fase 2
+    alert('Funcionalidade de veto de item ser\u00e1 implementada na Fase 2.');
+}
+
+// Fun\u00e7\u00e3o para remover veto de item
+function unvetoItem(itemId) {
+    if (!confirm('Deseja remover o veto deste item?')) return;
+
+    // Placeholder - implementar na Fase 2
+    alert('Funcionalidade de remo\u00e7\u00e3o de veto de item ser\u00e1 implementada na Fase 2.');
+}
+
+// Countdown da janela de veto
+{% if plan and plan.status == 'pending' %}
+function updateCountdown() {
+    const expiresAt = new Date('{{ plan.veto_window_expires_at.isoformat() }}');
+    const now = new Date();
+    const diff = expiresAt - now;
+
+    if (diff <= 0) {
+        document.getElementById('veto-countdown').innerHTML = '<span class="text-error">Expirado</span>';
+        return;
+    }
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    document.getElementById('veto-countdown').innerHTML =
+        `${expiresAt.toLocaleString()} <strong>(${hours}h ${minutes}m restantes)</strong>`;
+}
+
+updateCountdown();
+setInterval(updateCountdown, 60000); // Atualizar a cada minuto
+{% endif %}
+</script>
+{% endblock %}

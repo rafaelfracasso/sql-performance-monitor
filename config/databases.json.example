@@ -1,0 +1,110 @@
+{
+  "databases": [
+    {
+      "name": "SQL Server - Produção",
+      "type": "SQLSERVER",
+      "enabled": true,
+      "credentials": {
+        "server": "sqlserver-prod.example.com",
+        "port": "1433",
+        "database": "master",
+        "username": "monitor_user",
+        "password": "${SQL_SERVER_PROD_PASSWORD}",
+        "driver": "ODBC Driver 18 for SQL Server"
+      }
+    },
+    {
+      "name": "SQL Server - Desenvolvimento",
+      "type": "SQLSERVER",
+      "enabled": false,
+      "credentials": {
+        "server": "sqlserver-dev.example.com",
+        "port": "1433",
+        "database": "master",
+        "username": "monitor_user",
+        "password": "${SQL_SERVER_DEV_PASSWORD}",
+        "driver": "ODBC Driver 18 for SQL Server"
+      }
+    },
+    {
+      "name": "PostgreSQL - Produção",
+      "type": "POSTGRESQL",
+      "enabled": true,
+      "credentials": {
+        "server": "postgresql-prod.example.com",
+        "port": "5432",
+        "database": "postgres",
+        "username": "monitor_user",
+        "password": "${POSTGRESQL_PROD_PASSWORD}"
+      }
+    },
+    {
+      "name": "PostgreSQL - Desenvolvimento",
+      "type": "POSTGRESQL",
+      "enabled": false,
+      "credentials": {
+        "server": "postgresql-dev.example.com",
+        "port": "5432",
+        "database": "postgres",
+        "username": "monitor_user",
+        "password": "${POSTGRESQL_DEV_PASSWORD}"
+      }
+    },
+    {
+      "name": "SAP HANA - Produção",
+      "type": "HANA",
+      "enabled": false,
+      "credentials": {
+        "server": "hana-prod.example.com",
+        "port": "30015",
+        "database": "SYSTEMDB",
+        "username": "monitor_user",
+        "password": "${HANA_PROD_PASSWORD}"
+      }
+    }
+  ],
+  "_comments": {
+    "type": "Valores válidos: SQLSERVER, POSTGRESQL, HANA",
+    "enabled": "true = monitorar, false = ignorar",
+    "credentials": {
+      "password": "Use ${VAR_NAME} para referenciar variáveis de ambiente (RECOMENDADO) ou plaintext (NÃO SEGURO)",
+      "env_vars_examples": [
+        "export SQL_SERVER_PROD_PASSWORD='sua_senha_aqui'",
+        "export POSTGRESQL_PROD_PASSWORD='sua_senha_aqui'",
+        "export HANA_PROD_PASSWORD='sua_senha_aqui'"
+      ],
+      "sqlserver": {
+        "server": "Nome ou IP do servidor SQL Server",
+        "port": "Porta padrão: 1433",
+        "database": "Database a monitorar (geralmente 'master' para queries globais)",
+        "driver": "Driver ODBC instalado no sistema"
+      },
+      "postgresql": {
+        "server": "Nome ou IP do servidor PostgreSQL",
+        "port": "Porta padrão: 5432",
+        "database": "Database a monitorar (geralmente 'postgres' para queries globais)"
+      },
+      "hana": {
+        "server": "Nome ou IP do servidor SAP HANA",
+        "port": "Porta padrão: 30015 (SYSTEMDB) ou 30013 (tenant)",
+        "database": "Database/tenant a monitorar"
+      }
+    },
+    "security": {
+      "recommendation": "SEMPRE use variáveis de ambiente para senhas: password: '${VAR_NAME}'",
+      "warning": "NUNCA commite este arquivo com credenciais reais!",
+      "gitignore": "Arquivo já incluído em .gitignore por segurança"
+    },
+    "execution": {
+      "strategy": "Uma thread POR TIPO de banco (não por instância)",
+      "order": "Processamento SEQUENCIAL dentro de cada tipo",
+      "example": "Thread SQL Server processa SQL1 → SQL2 → SQL3 sequencialmente"
+    },
+    "cache": {
+      "sqlserver": "logs/query_cache_sqlserver.json",
+      "postgresql": "logs/query_cache_postgresql.json",
+      "hana": "logs/query_cache_hana.json",
+      "note": "Cache separado por tipo garante thread-safety sem locks"
+    }
+  }
+}

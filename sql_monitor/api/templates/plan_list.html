@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Planos de Otimiza\u00e7\u00e3o</h2>
+    <p class="subtitle">Gest\u00e3o de planos de otimiza\u00e7\u00e3o semanais</p>
+</div>
+
+<!-- Status Overview -->
+{% if plans %}
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-value">{{ plans|length }}</div>
+        <div class="metric-label">Total de Planos</div>
+    </div>
+
+    <div class="metric-card metric-warning">
+        <div class="metric-value">{{ plans|selectattr('status', 'equalto', 'pending')|list|length }}</div>
+        <div class="metric-label">Pendentes</div>
+    </div>
+
+    <div class="metric-card metric-success">
+        <div class="metric-value">{{ plans|selectattr('status', 'equalto', 'completed')|list|length }}</div>
+        <div class="metric-label">Completados</div>
+    </div>
+
+    <div class="metric-card metric-error">
+        <div class="metric-value">{{ plans|selectattr('status', 'equalto', 'vetoed')|list|length }}</div>
+        <div class="metric-label">Vetados</div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Lista de Planos -->
+<div class="section">
+    <div class="section-header">
+        <h3>Planos Dispon\u00edveis</h3>
+        <button onclick="generatePlan()" class="btn btn-primary">Gerar Novo Plano</button>
+    </div>
+
+    {% if plans %}
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID do Plano</th>
+                    <th>Gerado em</th>
+                    <th>Execu\u00e7\u00e3o Programada</th>
+                    <th>Status</th>
+                    <th>Total Otimiza\u00e7\u00f5es</th>
+                    <th>Auto-Aprovadas</th>
+                    <th>Requer Revis\u00e3o</th>
+                    <th>Bloqueadas</th>
+                    <th>A\u00e7\u00f5es</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for plan in plans %}
+                <tr>
+                    <td><code>{{ plan.plan_id }}</code></td>
+                    <td>{{ plan.generated_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                    <td>{{ plan.execution_scheduled_at.strftime('%d/%m/%Y %H:%M') }}</td>
+                    <td>
+                        <span class="badge badge-{{ plan.status }}">
+                            {{ plan.status|upper }}
+                        </span>
+                    </td>
+                    <td class="number">{{ plan.total_optimizations }}</td>
+                    <td class="number">{{ plan.auto_approved_count }}</td>
+                    <td class="number">{{ plan.requires_review_count }}</td>
+                    <td class="number">{{ plan.blocked_count }}</td>
+                    <td>
+                        <a href="/plans/{{ plan.plan_id }}" class="btn btn-sm btn-secondary">Ver Detalhes</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p class="empty-message">Nenhum plano de otimiza\u00e7\u00e3o dispon\u00edvel.</p>
+        <p>Planos s\u00e3o gerados automaticamente toda quinta-feira \u00e0s 18:00, ou voc\u00ea pode gerar um manualmente.</p>
+        <button onclick="generatePlan()" class="btn btn-primary">Gerar Plano Agora</button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Informa\u00e7\u00f5es sobre o Processo -->
+<div class="section info-section">
+    <h3>Como Funciona</h3>
+    <div class="info-grid">
+        <div class="info-card">
+            <div class="info-icon">1</div>
+            <div class="info-content">
+                <h4>Gera\u00e7\u00e3o</h4>
+                <p>Toda quinta-feira \u00e0s 18:00, o sistema analisa dados hist\u00f3ricos e gera um plano de otimiza\u00e7\u00e3o com sugest\u00f5es de \u00edndices, atualiza\u00e7\u00e3o de estat\u00edsticas e manuten\u00e7\u00e3o.</p>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <div class="info-icon">2</div>
+            <div class="info-content">
+                <h4>Janela de Veto (72h)</h4>
+                <p>De quinta \u00e0 domingo, DBAs podem revisar o plano e vetar otimiza\u00e7\u00f5es que considerem arriscadas ou inapropriadas.</p>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <div class="info-icon">3</div>
+            <div class="info-content">
+                <h4>Execu\u00e7\u00e3o Autom\u00e1tica</h4>
+                <p>Domingo \u00e0s 02:00, o sistema executa automaticamente as otimiza\u00e7\u00f5es n\u00e3o vetadas. Otimiza\u00e7\u00f5es cr\u00edticas nunca s\u00e3o executadas automaticamente.</p>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <div class="info-icon">4</div>
+            <div class="info-content">
+                <h4>Rollback Autom\u00e1tico</h4>
+                <p>Se houver degrada\u00e7\u00e3o de performance >20%, o sistema automaticamente reverte a otimiza\u00e7\u00e3o e notifica o time.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function generatePlan() {
+    if (!confirm('Deseja gerar um novo plano de otimiza\u00e7\u00e3o agora? Este processo pode levar alguns minutos.')) {
+        return;
+    }
+
+    // Placeholder - implementar na Fase 2
+    alert('Funcionalidade de gera\u00e7\u00e3o manual de planos ser\u00e1 implementada na Fase 2.');
+}
+</script>
+{% endblock %}

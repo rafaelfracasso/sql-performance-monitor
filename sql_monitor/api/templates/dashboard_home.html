@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Dashboard de Monitoramento</h2>
+    <p class="subtitle">Visão geral das últimas 24 horas</p>
+</div>
+
+<!-- Cards de Métricas Principais -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div class="metric-value">{{ summary.unique_queries }}</div>
+        <div class="metric-label">Queries Únicas</div>
+        <div class="metric-sublabel">{{ summary.total_occurrences }} ocorrências</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-value">{{ summary.analyses_performed }}</div>
+        <div class="metric-label">Análises LLM</div>
+        <div class="metric-sublabel">{{ summary.total_llm_tokens|format_number }} tokens</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-value">{{ summary.alerts.total }}</div>
+        <div class="metric-label">Alertas</div>
+        <div class="metric-sublabel">
+            {{ summary.alerts.critical }} críticos, {{ summary.alerts.high }} altos
+        </div>
+    </div>
+
+    <div class="metric-card {% if health.success_rate_percent >= 95 %}metric-success{% elif health.success_rate_percent >= 80 %}metric-warning{% else %}metric-error{% endif %}">
+        <div class="metric-value">{{ "%.1f"|format(health.success_rate_percent) }}%</div>
+        <div class="metric-label">Taxa de Sucesso</div>
+        <div class="metric-sublabel">{{ health.successful_cycles }}/{{ health.total_cycles }} ciclos</div>
+    </div>
+</div>
+
+<!-- Seção de Instâncias Ativas -->
+<div class="section">
+    <h3>Instâncias Ativas ({{ health.active_instances|length }})</h3>
+    <div class="instances-grid">
+        {% for instance in health.active_instances %}
+        <div class="instance-card">
+            <div class="instance-header">
+                <span class="instance-name">{{ instance.name }}</span>
+                <span class="badge badge-{{ instance.type }}">{{ instance.type }}</span>
+            </div>
+            <div class="instance-stats">
+                <span class="stat-item">Status: Online</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Top 5 Queries Problemáticas -->
+<div class="section">
+    <div class="section-header">
+        <h3>Top 5 Queries Mais Lentas</h3>
+        <a href="/dashboard/queries" class="btn btn-secondary">Ver Todas</a>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Instância</th>
+                    <th>Tabela</th>
+                    <th>Query</th>
+                    <th>CPU Médio (ms)</th>
+                    <th>Duration (ms)</th>
+                    <th>Ocorrências</th>
+                    <th>Severidade</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for query in worst_queries %}
+                <tr>
+                    <td>{{ query.instance_name }}</td>
+                    <td>{{ query.table_name }}</td>
+                    <td class="query-preview">{{ query.query_preview[:80] }}...</td>
+                    <td class="number">{{ "%.0f"|format(query.avg_cpu_time_ms) }}</td>
+                    <td class="number">{{ "%.0f"|format(query.avg_duration_ms) }}</td>
+                    <td class="number">{{ query.occurrences }}</td>
+                    <td>
+                        <span class="severity-badge severity-{{ query.severity|default('medium') }}">
+                            {{ query.severity|default('medium')|upper }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Alertas Recentes -->
+<div class="section">
+    <div class="section-header">
+        <h3>Alertas Recentes ({{ recent_alerts|length }})</h3>
+        <a href="/dashboard/alerts" class="btn btn-secondary">Ver Todos</a>
+    </div>
+
+    {% if recent_alerts %}
+    <div class="alerts-list">
+        {% for alert in recent_alerts[:10] %}
+        <div class="alert-item alert-{{ alert.severity }}">
+            <div class="alert-time">{{ alert.alert_time.strftime('%d/%m %H:%M') }}</div>
+            <div class="alert-content">
+                <div class="alert-title">
+                    <strong>{{ alert.instance_name }}</strong> - {{ alert.alert_type|replace('_', ' ')|title }}
+                </div>
+                <div class="alert-details">
+                    {{ alert.database_name }}.{{ alert.table_name }} -
+                    Threshold: {{ "%.0f"|format(alert.threshold_value) }},
+                    Atual: {{ "%.0f"|format(alert.actual_value) }}
+                </div>
+            </div>
+            <div class="alert-severity">
+                <span class="severity-badge severity-{{ alert.severity }}">{{ alert.severity|upper }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-message">Nenhum alerta nas últimas 24 horas.</p>
+    {% endif %}
+</div>
+
+<!-- Cache Efficiency -->
+<div class="section">
+    <h3>Eficiência do Cache</h3>
+    <div id="cacheChart" style="max-width: 600px; margin: 20px auto;">
+        <canvas id="cacheEfficiencyChart"></canvas>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Buscar dados de eficiência do cache
+fetch('/api/dashboard/cache-efficiency?hours=24')
+    .then(response => response.json())
+    .then(data => {
+        const ctx = document.getElementById('cacheEfficiencyChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Cache Hits', 'Novas Análises'],
+                datasets: [{
+                    data: [data.cache_hits, data.new_analyses],
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.8)',
+                        'rgba(255, 99, 132, 0.8)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Cache Hit Rate: ' + data.cache_hit_rate_percent.toFixed(1) + '%'
+                    }
+                }
+            }
+        });
+    })
+    .catch(error => console.error('Erro ao carregar cache efficiency:', error));
+</script>
+{% endblock %}

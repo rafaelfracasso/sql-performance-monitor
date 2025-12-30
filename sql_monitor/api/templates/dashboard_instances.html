@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Inst\u00e2ncias Monitoradas</h2>
+    <p class="subtitle">Status e sa\u00fade das inst\u00e2ncias SQL Server e HANA</p>
+</div>
+
+<!-- Overview Cards -->
+<div class="metrics-grid">
+    <div class="metric-card metric-success">
+        <div class="metric-value">{{ health.active_instances|length }}</div>
+        <div class="metric-label">Inst\u00e2ncias Ativas</div>
+        <div class="metric-sublabel">Online</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-value">{{ health.total_cycles }}</div>
+        <div class="metric-label">Ciclos Executados</div>
+        <div class="metric-sublabel">Hist\u00f3rico total</div>
+    </div>
+
+    <div class="metric-card {% if health.success_rate_percent >= 95 %}metric-success{% elif health.success_rate_percent >= 80 %}metric-warning{% else %}metric-error{% endif %}">
+        <div class="metric-value">{{ "%.1f"|format(health.success_rate_percent) }}%</div>
+        <div class="metric-label">Taxa de Sucesso</div>
+        <div class="metric-sublabel">{{ health.successful_cycles }}/{{ health.total_cycles }} ciclos</div>
+    </div>
+
+    <div class="metric-card {% if health.error_rate_percent > 10 %}metric-error{% elif health.error_rate_percent > 5 %}metric-warning{% else %}metric-success{% endif %}">
+        <div class="metric-value">{{ "%.1f"|format(health.error_rate_percent) }}%</div>
+        <div class="metric-label">Taxa de Erro</div>
+        <div class="metric-sublabel">{{ health.failed_cycles }} falhas</div>
+    </div>
+</div>
+
+<!-- Inst\u00e2ncias Grid -->
+<div class="section">
+    <div class="section-header">
+        <h3>Detalhes das Inst\u00e2ncias</h3>
+        <span class="badge">{{ health.active_instances|length }} inst\u00e2ncias</span>
+    </div>
+
+    <div class="instances-grid">
+        {% for instance in health.active_instances %}
+        <div class="instance-card">
+            <div class="instance-header">
+                <div>
+                    <span class="instance-name">{{ instance.name }}</span>
+                    <span class="badge badge-{{ instance.type }}">{{ instance.type|upper }}</span>
+                </div>
+                <span class="status-indicator status-online">Online</span>
+            </div>
+
+            <div class="instance-body">
+                <div class="instance-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Queries Encontradas</span>
+                        <span class="stat-value">{{ instance.queries_found or 0 }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Cache Hits</span>
+                        <span class="stat-value">{{ instance.cache_hits or 0 }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Erros</span>
+                        <span class="stat-value {% if instance.errors > 0 %}text-error{% endif %}">
+                            {{ instance.errors or 0 }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="instance-health">
+                    <div class="health-bar-container">
+                        <div class="health-bar-label">Health Score</div>
+                        <div class="health-bar-wrapper">
+                            <div class="health-bar" style="width: {{ instance.health_score|default(100) }}%"></div>
+                        </div>
+                        <div class="health-bar-value">{{ "%.0f"|format(instance.health_score|default(100)) }}%</div>
+                    </div>
+                </div>
+
+                {% if instance.last_cycle %}
+                <div class="instance-footer">
+                    <small>\u00daltimo ciclo: {{ instance.last_cycle.strftime('%d/%m/%Y %H:%M:%S') }}</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Hist\u00f3rico de Ciclos -->
+<div class="section">
+    <h3>Hist\u00f3rico de Ciclos (7 dias)</h3>
+    <div id="cyclesChart" style="max-width: 1000px; margin: 20px auto;">
+        <canvas id="cyclesHistoryChart"></canvas>
+    </div>
+</div>
+
+<!-- Estat\u00edsticas Gerais -->
+<div class="section">
+    <h3>Estat\u00edsticas Gerais (24h)</h3>
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>M\u00e9trica</th>
+                    <th>Valor</th>
+                    <th>Descri\u00e7\u00e3o</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Total de Ciclos</strong></td>
+                    <td class="number">{{ health.total_cycles }}</td>
+                    <td>Ciclos de monitoramento executados</td>
+                </tr>
+                <tr>
+                    <td><strong>Ciclos com Sucesso</strong></td>
+                    <td class="number">{{ health.successful_cycles }}</td>
+                    <td>Ciclos completados sem erros</td>
+                </tr>
+                <tr>
+                    <td><strong>Ciclos com Falha</strong></td>
+                    <td class="number">{{ health.failed_cycles }}</td>
+                    <td>Ciclos que falharam</td>
+                </tr>
+                <tr>
+                    <td><strong>Queries Analisadas (LLM)</strong></td>
+                    <td class="number">{{ health.total_analyses or 0 }}</td>
+                    <td>An\u00e1lises realizadas com LLM</td>
+                </tr>
+                <tr>
+                    <td><strong>Cache Hits</strong></td>
+                    <td class="number">{{ health.total_cache_hits or 0 }}</td>
+                    <td>An\u00e1lises recuperadas do cache</td>
+                </tr>
+                <tr>
+                    <td><strong>Tokens LLM Utilizados</strong></td>
+                    <td class="number">{{ "{:,}".format(health.total_tokens|default(0)) }}</td>
+                    <td>Total de tokens consumidos</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Buscar dados hist\u00f3ricos de ciclos
+fetch('/api/dashboard/trends?days=7&granularity=day')
+    .then(response => response.json())
+    .then(data => {
+        const ctx = document.getElementById('cyclesHistoryChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: data,
+            options: {
+                responsive: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Evolu\u00e7\u00e3o de Performance nos \u00daltimos 7 Dias'
+                    }
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Tempo (ms)'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Quantidade'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        }
+                    }
+                }
+            }
+        });
+    })
+    .catch(error => console.error('Erro ao carregar hist\u00f3rico de ciclos:', error));
+</script>
+{% endblock %}

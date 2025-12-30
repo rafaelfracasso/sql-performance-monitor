@@ -1,0 +1,116 @@
+{
+  "monitor": {
+    "interval_seconds": 60,
+    "comment": "Intervalo entre verificações (5 minutos = 300 segundos)"
+  },
+  "performance_thresholds": {
+    "execution_time_seconds": 30,
+    "cpu_time_ms": 10000,
+    "logical_reads": 50000,
+    "physical_reads": 10000,
+    "writes": 5000,
+    "comment": "Queries que ultrapassarem QUALQUER destes valores serão analisadas"
+  },
+  "llm": {
+    "provider": "gemini",
+    "model": "gemini-flash-latest",
+    "temperature": 0.1,
+    "max_tokens": 8192,
+    "max_retries": 3,
+    "retry_delays": [3, 8, 15],
+    "rate_limit": {
+      "max_requests_per_day": 1500,
+      "max_requests_per_minute": 60,
+      "max_requests_per_cycle": 5,
+      "min_delay_between_requests": 2
+    },
+    "comment": ""
+  },
+  "security": {
+    "sanitize_queries": true,
+    "placeholder_prefix": "@p",
+    "show_example_values": true,
+    "comment": "Segurança: valores sensíveis são substituídos por placeholders tipados"
+  },
+  "query_cache": {
+    "enabled": true,
+    "ttl_hours": 24,
+    "cache_file": "logs/query_cache.json",
+    "auto_save_interval": 300,
+    "comment": "Cache de queries analisadas: TTL de 24h deslizantes, evita análises duplicadas pelo LLM"
+  },
+  "teams": {
+    "enabled": true,
+    "webhook_url": "https://default33a5c870c9224e919e99053135c7a6.57.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/d0271a1bc09244358e412ac3d5622f7f/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=hJzSRz8VV9uwPJFmo21_bppskNtJ9V-PWFTZ_BqxybM",
+    "notify_on_cache_hit": true,
+    "priority_filter": [],
+    "timeout": 10,
+    "comment": "Integração com Microsoft Teams: envia alertas para Power Automate que formata e envia ao Teams."
+  },
+  "timeouts": {
+    "database_connect": 10,
+    "database_query": 60,
+    "llm_analysis": 30,
+    "thread_shutdown": 90,
+    "circuit_breaker_recovery": 60,
+    "comment": "Timeouts em segundos: thread_shutdown deve ser suficiente para completar análise LLM em andamento"
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "colored",
+    "log_file": "logs/monitor.log",
+    "enable_console": true,
+    "comment": "Níveis: DEBUG, INFO, WARNING, ERROR, CRITICAL | Formatos: colored, json, simple"
+  },
+  "metrics_store": {
+    "db_path": "logs/metrics.duckdb",
+    "enable_compression": true,
+    "retention_days": 30,
+    "comment": "DuckDB para métricas e observabilidade. Substitui logs TXT por banco analítico embarcado."
+  },
+  "weekly_optimizer": {
+    "enabled": false,
+    "schedule": {
+      "analysis_day": "thursday",
+      "analysis_time": "18:00",
+      "execution_day": "sunday",
+      "execution_time": "02:00",
+      "report_day": "monday",
+      "report_time": "08:00",
+      "comment": "Quinta 18h: gera plano | Domingo 02h: executa | Segunda 08h: relatório"
+    },
+    "veto_window": {
+      "hours": 72,
+      "check_before_execution": true,
+      "comment": "72 horas de quinta a domingo para DBA vetar via web interface"
+    },
+    "risk_thresholds": {
+      "table_size_gb_medium": 100,
+      "table_size_gb_high": 500,
+      "table_size_gb_critical": 1000,
+      "index_fragmentation_percent": 50,
+      "max_execution_time_minutes": 240,
+      "comment": "Thresholds para classificação automática de risco"
+    },
+    "auto_rollback": {
+      "enabled": true,
+      "degradation_threshold_percent": 20,
+      "wait_after_execution_minutes": 10,
+      "comment": "Rollback automático se degradação > 20% após 10 min"
+    },
+    "api": {
+      "enabled": false,
+      "host": "0.0.0.0",
+      "port": 8080,
+      "cors_enabled": true,
+      "comment": "API REST e Dashboard Web para visualização e gerenciamento"
+    },
+    "analysis": {
+      "days": 7,
+      "min_occurrences": 10,
+      "min_avg_duration_ms": 1000,
+      "comment": "Analisa últimos 7 dias, queries com 10+ ocorrências e 1s+ duração"
+    },
+    "comment": "Sistema de otimização semanal automático com veto via web. Ver WEEKLY_OPTIMIZER.md"
+  }
+}

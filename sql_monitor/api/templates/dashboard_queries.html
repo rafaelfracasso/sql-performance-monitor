@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Top Queries Problem\u00e1ticas</h2>
+    <p class="subtitle">An\u00e1lise de queries com pior performance</p>
+</div>
+
+<!-- Filtros -->
+<div class="filters-section">
+    <form method="get" action="/dashboard/queries" class="filters-form">
+        <div class="filter-group">
+            <label for="period">Per\u00edodo:</label>
+            <select name="period" id="period" onchange="this.form.submit()">
+                <option value="24h" {% if period == '24h' %}selected{% endif %}>24 horas</option>
+                <option value="7d" {% if period == '7d' %}selected{% endif %}>7 dias</option>
+                <option value="30d" {% if period == '30d' %}selected{% endif %}>30 dias</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="metric">M\u00e9trica:</label>
+            <select name="metric" id="metric" onchange="this.form.submit()">
+                <option value="cpu_time_ms" {% if metric == 'cpu_time_ms' %}selected{% endif %}>CPU Time</option>
+                <option value="duration_ms" {% if metric == 'duration_ms' %}selected{% endif %}>Duration</option>
+                <option value="logical_reads" {% if metric == 'logical_reads' %}selected{% endif %}>Logical Reads</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="instance">Inst\u00e2ncia:</label>
+            <select name="instance" id="instance" onchange="this.form.submit()">
+                <option value="">Todas</option>
+                {% for inst in instance_filter %}
+                <option value="{{ inst }}" {% if instance == inst %}selected{% endif %}>{{ inst }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+</div>
+
+<!-- Tabela de Queries -->
+<div class="section">
+    <div class="section-header">
+        <h3>Top 50 Queries - {{ metric|replace('_', ' ')|title }}</h3>
+        <span class="badge">{{ queries|length }} resultados</span>
+    </div>
+
+    {% if queries %}
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Inst\u00e2ncia</th>
+                    <th>Banco</th>
+                    <th>Tabela</th>
+                    <th>Query</th>
+                    <th>CPU M\u00e9dio (ms)</th>
+                    <th>Duration (ms)</th>
+                    <th>Logical Reads</th>
+                    <th>Ocorr\u00eancias</th>
+                    <th>Severidade</th>
+                    <th>An\u00e1lise LLM</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for query in queries %}
+                <tr>
+                    <td>{{ query.instance_name }}</td>
+                    <td>{{ query.database_name or 'N/A' }}</td>
+                    <td>{{ query.table_name or 'N/A' }}</td>
+                    <td class="query-preview" title="{{ query.query_preview }}">
+                        {{ query.query_preview[:100] }}...
+                    </td>
+                    <td class="number">{{ "%.0f"|format(query.avg_cpu_time_ms) }}</td>
+                    <td class="number">{{ "%.0f"|format(query.avg_duration_ms) }}</td>
+                    <td class="number">{{ "%.0f"|format(query.avg_logical_reads) }}</td>
+                    <td class="number">{{ query.occurrences }}</td>
+                    <td>
+                        <span class="severity-badge severity-{{ query.severity|default('medium') }}">
+                            {{ query.severity|default('medium')|upper }}
+                        </span>
+                    </td>
+                    <td class="center">
+                        {% if query.has_analysis %}
+                        <span class="badge badge-success">Sim</span>
+                        {% else %}
+                        <span class="badge badge-secondary">N\u00e3o</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty-message">Nenhuma query encontrada para os filtros selecionados.</p>
+    {% endif %}
+</div>
+
+<!-- Stats Summary -->
+{% if queries %}
+<div class="section">
+    <h3>Resumo Estat\u00edstico</h3>
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-value">{{ queries|length }}</div>
+            <div class="metric-label">Queries Encontradas</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-value">{{ queries|sum(attribute='occurrences') }}</div>
+            <div class="metric-label">Ocorr\u00eancias Totais</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-value">{{ queries|selectattr('has_analysis')|list|length }}</div>
+            <div class="metric-label">Com An\u00e1lise LLM</div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-value">{{ queries|rejectattr('has_analysis')|list|length }}</div>
+            <div class="metric-label">Sem An\u00e1lise LLM</div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

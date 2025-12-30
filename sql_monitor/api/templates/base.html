@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ page_title }} - SQL Monitor{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="logo">SQL Monitor</h1>
+                <nav class="nav">
+                    <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">Dashboard</a>
+                    <a href="/dashboard/queries" class="nav-link {% if 'queries' in request.url.path %}active{% endif %}">Queries</a>
+                    <a href="/dashboard/alerts" class="nav-link {% if 'alerts' in request.url.path %}active{% endif %}">Alertas</a>
+                    <a href="/dashboard/instances" class="nav-link {% if 'instances' in request.url.path %}active{% endif %}">Instâncias</a>
+                    <a href="/dashboard/trends" class="nav-link {% if 'trends' in request.url.path %}active{% endif %}">Tendências</a>
+                    <a href="/plans" class="nav-link {% if 'plans' in request.url.path %}active{% endif %}">Planos</a>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>SQL Monitor v1.0 - Database Performance Monitoring &amp; Optimization</p>
+        </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

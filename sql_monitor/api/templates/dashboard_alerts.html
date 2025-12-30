@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Alertas de Performance</h2>
+    <p class="subtitle">Monitoramento de alertas e hotspots</p>
+</div>
+
+<!-- Filtros -->
+<div class="filters-section">
+    <form method="get" action="/dashboard/alerts" class="filters-form">
+        <div class="filter-group">
+            <label for="period">Per\u00edodo:</label>
+            <select name="period" id="period" onchange="this.form.submit()">
+                <option value="24h" {% if period == '24h' %}selected{% endif %}>24 horas</option>
+                <option value="7d" {% if period == '7d' %}selected{% endif %}>7 dias</option>
+                <option value="30d" {% if period == '30d' %}selected{% endif %}>30 dias</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="severity">Severidade:</label>
+            <select name="severity" id="severity" onchange="this.form.submit()">
+                <option value="">Todas</option>
+                <option value="critical" {% if severity_filter == 'critical' %}selected{% endif %}>Critical</option>
+                <option value="high" {% if severity_filter == 'high' %}selected{% endif %}>High</option>
+                <option value="medium" {% if severity_filter == 'medium' %}selected{% endif %}>Medium</option>
+                <option value="low" {% if severity_filter == 'low' %}selected{% endif %}>Low</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="instance">Inst\u00e2ncia:</label>
+            <select name="instance" id="instance" onchange="this.form.submit()">
+                <option value="">Todas</option>
+                {% for inst in instance_filter %}
+                <option value="{{ inst }}" {% if instance == inst %}selected{% endif %}>{{ inst }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </form>
+</div>
+
+<!-- Stats Cards -->
+<div class="metrics-grid">
+    <div class="metric-card metric-error">
+        <div class="metric-value">{{ alerts|selectattr('severity', 'equalto', 'critical')|list|length }}</div>
+        <div class="metric-label">Critical</div>
+    </div>
+
+    <div class="metric-card metric-warning">
+        <div class="metric-value">{{ alerts|selectattr('severity', 'equalto', 'high')|list|length }}</div>
+        <div class="metric-label">High</div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-value">{{ alerts|selectattr('severity', 'equalto', 'medium')|list|length }}</div>
+        <div class="metric-label">Medium</div>
+    </div>
+
+    <div class="metric-card metric-success">
+        <div class="metric-value">{{ alerts|selectattr('severity', 'equalto', 'low')|list|length }}</div>
+        <div class="metric-label">Low</div>
+    </div>
+</div>
+
+<!-- Hotspots -->
+{% if hotspots %}
+<div class="section">
+    <div class="section-header">
+        <h3>Hotspots - Tabelas com Mais Alertas</h3>
+        <span class="badge">{{ hotspots|length }} hotspots</span>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Inst\u00e2ncia</th>
+                    <th>Banco</th>
+                    <th>Tabela</th>
+                    <th>Total Alertas</th>
+                    <th>Critical</th>
+                    <th>High</th>
+                    <th>Medium</th>
+                    <th>Low</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for hotspot in hotspots[:20] %}
+                <tr>
+                    <td>{{ hotspot.instance_name }}</td>
+                    <td>{{ hotspot.database_name }}</td>
+                    <td><strong>{{ hotspot.table_name }}</strong></td>
+                    <td class="number"><strong>{{ hotspot.total_alerts }}</strong></td>
+                    <td class="number">{{ hotspot.critical_count }}</td>
+                    <td class="number">{{ hotspot.high_count }}</td>
+                    <td class="number">{{ hotspot.medium_count }}</td>
+                    <td class="number">{{ hotspot.low_count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Lista de Alertas -->
+<div class="section">
+    <div class="section-header">
+        <h3>Alertas Recentes</h3>
+        <span class="badge">{{ alerts|length }} alertas</span>
+    </div>
+
+    {% if alerts %}
+    <div class="alerts-list">
+        {% for alert in alerts %}
+        <div class="alert-item alert-{{ alert.severity }}">
+            <div class="alert-time">{{ alert.alert_time.strftime('%d/%m/%Y %H:%M') }}</div>
+            <div class="alert-content">
+                <div class="alert-title">
+                    <strong>{{ alert.instance_name }}</strong> - {{ alert.alert_type|replace('_', ' ')|title }}
+                </div>
+                <div class="alert-details">
+                    {% if alert.database_name %}
+                    {{ alert.database_name }}.{{ alert.table_name }} -
+                    {% endif %}
+                    Threshold: {{ "%.0f"|format(alert.threshold_value) }},
+                    Atual: {{ "%.0f"|format(alert.actual_value) }}
+                </div>
+                {% if alert.query_preview %}
+                <div class="alert-query">
+                    <code>{{ alert.query_preview[:150] }}...</code>
+                </div>
+                {% endif %}
+            </div>
+            <div class="alert-severity">
+                <span class="severity-badge severity-{{ alert.severity }}">{{ alert.severity|upper }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-message">Nenhum alerta encontrado para os filtros selecionados.</p>
+    {% endif %}
+</div>
+
+<!-- Gr\u00e1fico de Alertas por Tipo -->
+{% if alerts %}
+<div class="section">
+    <h3>Alertas por Tipo</h3>
+    <div id="alertsChart" style="max-width: 800px; margin: 20px auto;">
+        <canvas id="alertsByTypeChart"></canvas>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+{% if alerts %}
+// Agrupar alertas por tipo
+const alertsByType = {};
+const alertsData = [
+    {% for alert in alerts %}
+    { alert_type: "{{ alert.alert_type }}" }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+alertsData.forEach(alert => {
+    const type = alert.alert_type;
+    alertsByType[type] = (alertsByType[type] || 0) + 1;
+});
+
+const labels = Object.keys(alertsByType);
+const data = Object.values(alertsByType);
+
+// Criar gr\u00e1fico
+const ctx = document.getElementById('alertsByTypeChart').getContext('2d');
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: labels.map(l => l.replace(/_/g, ' ')),
+        datasets: [{
+            label: 'Quantidade de Alertas',
+            data: data,
+            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

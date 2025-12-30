@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Tend\u00eancias de Performance</h2>
+    <p class="subtitle">An\u00e1lise de tend\u00eancias e evolu\u00e7\u00e3o ao longo do tempo</p>
+</div>
+
+<!-- Filtro de Per\u00edodo -->
+<div class="filters-section">
+    <form method="get" action="/dashboard/trends" class="filters-form">
+        <div class="filter-group">
+            <label for="days">Per\u00edodo:</label>
+            <select name="days" id="days" onchange="this.form.submit()">
+                <option value="7" {% if days == 7 %}selected{% endif %}>7 dias</option>
+                <option value="14" {% if days == 14 %}selected{% endif %}>14 dias</option>
+                <option value="30" {% if days == 30 %}selected{% endif %}>30 dias</option>
+            </select>
+        </div>
+    </form>
+</div>
+
+<!-- Performance ao Longo do Tempo -->
+<div class="section">
+    <h3>Performance ao Longo do Tempo</h3>
+    <div class="chart-container">
+        <canvas id="performanceTrendChart"></canvas>
+    </div>
+</div>
+
+<!-- Queries Analisadas vs Cache -->
+<div class="section">
+    <h3>An\u00e1lises LLM vs Cache</h3>
+    <div class="chart-container">
+        <canvas id="cacheVsAnalysisChart"></canvas>
+    </div>
+</div>
+
+<!-- Alertas ao Longo do Tempo -->
+<div class="section">
+    <h3>Alertas por Dia</h3>
+    <div class="chart-container">
+        <canvas id="alertsTrendChart"></canvas>
+    </div>
+</div>
+
+<!-- Compara\u00e7\u00e3o Entre Inst\u00e2ncias -->
+<div class="section">
+    <h3>Compara\u00e7\u00e3o de Performance por Inst\u00e2ncia</h3>
+    <div class="chart-container">
+        <canvas id="instanceComparisonChart"></canvas>
+    </div>
+</div>
+
+<!-- Tabela de Dados -->
+<div class="section">
+    <div class="section-header">
+        <h3>Dados Detalhados</h3>
+        <button onclick="exportData()" class="btn btn-secondary">Exportar CSV</button>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table" id="trendsTable">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Queries \u00danicas</th>
+                    <th>Total Queries</th>
+                    <th>CPU M\u00e9dio (ms)</th>
+                    <th>Duration M\u00e9dio (ms)</th>
+                    <th>CPU M\u00e1ximo (ms)</th>
+                    <th>Duration M\u00e1ximo (ms)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for trend in trends %}
+                <tr>
+                    <td>{{ trend.time_bucket }}</td>
+                    <td class="number">{{ trend.unique_queries }}</td>
+                    <td class="number">{{ trend.total_queries }}</td>
+                    <td class="number">{{ "%.0f"|format(trend.avg_cpu_ms) }}</td>
+                    <td class="number">{{ "%.0f"|format(trend.avg_duration_ms) }}</td>
+                    <td class="number">{{ "%.0f"|format(trend.max_cpu_ms) }}</td>
+                    <td class="number">{{ "%.0f"|format(trend.max_duration_ms) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Buscar dados da API
+const days = {{ days }};
+
+fetch(`/api/dashboard/trends?days=${days}&granularity=day`)
+    .then(response => response.json())
+    .then(data => {
+        // Gr\u00e1fico de Performance
+        const ctx1 = document.getElementById('performanceTrendChart').getContext('2d');
+        new Chart(ctx1, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [
+                    {
+                        label: 'CPU M\u00e9dio (ms)',
+                        data: data.datasets[0].data,
+                        borderColor: data.datasets[0].borderColor,
+                        backgroundColor: data.datasets[0].backgroundColor,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Duration M\u00e9dia (ms)',
+                        data: data.datasets[1].data,
+                        borderColor: data.datasets[1].borderColor,
+                        backgroundColor: data.datasets[1].backgroundColor,
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 2.5,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Tempo (ms)'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Gr\u00e1fico de Queries
+        const ctx2 = document.getElementById('cacheVsAnalysisChart').getContext('2d');
+        new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: data.labels,
+                datasets: [
+                    {
+                        label: 'Queries \u00danicas',
+                        data: data.datasets[2].data,
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 2.5,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Quantidade'
+                        }
+                    }
+                }
+            }
+        });
+    })
+    .catch(error => console.error('Erro ao carregar dados de tend\u00eancias:', error));
+
+// Buscar dados de alertas
+fetch(`/api/dashboard/alerts?period=${days}d`)
+    .then(response => response.json())
+    .then(alerts => {
+        // Agrupar alertas por dia
+        const alertsByDay = {};
+        alerts.forEach(alert => {
+            const day = alert.alert_time.split('T')[0];
+            alertsByDay[day] = (alertsByDay[day] || 0) + 1;
+        });
+
+        const labels = Object.keys(alertsByDay).sort();
+        const data = labels.map(label => alertsByDay[label]);
+
+        const ctx3 = document.getElementById('alertsTrendChart').getContext('2d');
+        new Chart(ctx3, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Alertas',
+                    data: data,
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 2.5,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        },
+                        title: {
+                            display: true,
+                            text: 'Quantidade de Alertas'
+                        }
+                    }
+                }
+            }
+        });
+    })
+    .catch(error => console.error('Erro ao carregar alertas:', error));
+
+// Buscar dados de inst\u00e2ncias
+fetch('/api/dashboard/instances')
+    .then(response => response.json())
+    .then(health => {
+        const instances = health.active_instances;
+        const labels = instances.map(i => i.name);
+        const queriesData = instances.map(i => i.queries_found || 0);
+        const errorsData = instances.map(i => i.errors || 0);
+
+        const ctx4 = document.getElementById('instanceComparisonChart').getContext('2d');
+        new Chart(ctx4, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Queries Encontradas',
+                        data: queriesData,
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Erros',
+                        data: errorsData,
+                        backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 2.5,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Quantidade'
+                        }
+                    }
+                }
+            }
+        });
+    })
+    .catch(error => console.error('Erro ao carregar dados de inst\u00e2ncias:', error));
+
+// Fun\u00e7\u00e3o para exportar dados
+function exportData() {
+    const table = document.getElementById('trendsTable');
+    let csv = [];
+
+    // Header
+    const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent);
+    csv.push(headers.join(','));
+
+    // Rows
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    rows.forEach(row => {
+        const cells = Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim());
+        csv.push(cells.join(','));
+    });
+
+    // Download
+    const csvContent = csv.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `performance_trends_${days}d.csv`;
+    link.click();
+}
+</script>
+{% endblock %}
