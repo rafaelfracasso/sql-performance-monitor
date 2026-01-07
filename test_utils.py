@@ -25,8 +25,13 @@ def test_query_cache():
     temp_file.close()
 
     try:
-        config = {"query_cache": {"max_hours": 24}}
-        cache = QueryCache(cache_file=temp_file.name, config=config)
+        config = {
+            "enabled": True,
+            "ttl_hours": 24,
+            "cache_file": temp_file.name,
+            "auto_save_interval": 300
+        }
+        cache = QueryCache(config=config)
 
         # Teste 1: Adicionar e recuperar
         print("\n1️⃣  Testando add/get...")
@@ -59,7 +64,7 @@ def test_query_cache():
         print("\n3️⃣  Testando save/load...")
         cache.save()
 
-        cache2 = QueryCache(cache_file=temp_file.name, config=config)
+        cache2 = QueryCache(config=config)
         retrieved2 = cache2.get(query_hash)
 
         if retrieved2:
