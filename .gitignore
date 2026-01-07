@@ -45,6 +45,7 @@ sql_monitor_data/
 
 # Cache
 *.cache
+.pytest_cache/
 
 # IDE
 .vscode/
