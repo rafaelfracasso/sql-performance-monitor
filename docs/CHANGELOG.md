@@ -2,11 +2,11 @@
 
 ## [2.1.0] - 2025-12-23
 
-### 🔒 Correções de Segurança e Confiabilidade
+### Correções de Segurança e Confiabilidade
 
 Esta atualização resolve **todos os 5 issues críticos** e **1 issue major** identificados no code review, tornando o sistema production-ready.
 
-#### ✅ Issue #1: Secrets Management (CRÍTICO)
+#### Issue #1: Secrets Management (CRÍTICO)
 - **Implementado**: Sistema completo de resolução de credenciais com variáveis de ambiente
 - **Novo arquivo**: `sql_monitor/utils/credentials_resolver.py` (229 linhas)
 - **Sintaxe**: `"password": "${SQL_SERVER_PROD_PASSWORD}"` em databases.json
@@ -14,39 +14,39 @@ Esta atualização resolve **todos os 5 issues críticos** e **1 issue major** i
 - **Documentação**: Guia completo de segurança em `SECURITY.md`
 - **Suporte**: AWS Secrets Manager, Azure Key Vault, HashiCorp Vault (documentado)
 
-#### ✅ Issue #2: Bare Except Clauses (CRÍTICO)
+#### Issue #2: Bare Except Clauses (CRÍTICO)
 - **Corrigido**: Substituído `except:` por exceptions específicas em 4 locais
 - **Arquivos**: `connection.py`, `query_sanitizer.py` (2x)
 - **Melhoria**: Preserva KeyboardInterrupt e SystemExit, melhor debugabilidade
 
-#### ✅ Issue #3: Graceful Shutdown (CRÍTICO)
+#### Issue #3: Graceful Shutdown (CRÍTICO)
 - **Implementado**: Shutdown graceful com `threading.Event()`
 - **Removido**: `daemon=True` - threads agora finalizam corretamente
 - **Timeout**: 90s configurável (`config.json` → `timeouts.thread_shutdown`)
 - **Benefício**: Zero perda de dados, cache e conexões salvos antes de encerrar
 - **Interrupção rápida**: `shutdown_event.wait()` permite cancelamento instantâneo
 
-#### ✅ Issue #4: Connection Pooling (CRÍTICO)
+#### Issue #4: Connection Pooling (CRÍTICO)
 - **Implementado**: Infraestrutura completa de connection pooling
 - **Novo arquivo**: `sql_monitor/utils/connection_pool.py` (263 linhas)
 - **Recursos**: Min/max size, idle timeout, health checks, context manager
 - **Thread-safe**: Usa `queue.Queue` para gerenciamento de conexões
 - **Status**: Infraestrutura pronta (integração com conexões em próxima fase)
 
-#### ✅ Issue #5: Circuit Breaker para LLM (CRÍTICO)
+#### Issue #5: Circuit Breaker para LLM (CRÍTICO)
 - **Implementado**: Circuit breaker com 3 estados (CLOSED/OPEN/HALF-OPEN)
 - **Threshold**: Abre após 5 falhas consecutivas
 - **Recovery**: Tenta novamente após 60s (half-open)
 - **Inteligente**: Distingue erros temporários (503) de sistemáticos (429, auth)
 - **Monitoramento**: Método `get_circuit_state()` para observabilidade
 
-#### ✅ Issue #6: Cache Thread-Safe (MAJOR)
+#### Issue #6: Cache Thread-Safe (MAJOR)
 - **Implementado**: Thread-safety completa com `threading.RLock()`
 - **Protegidos**: Todos os 10 métodos que acessam `self.cache`
 - **Otimização**: `save_cache()` cria cópia antes de I/O para evitar lock prolongado
 - **Benefício**: Elimina race conditions em ambientes multithread
 
-#### ✅ Issue #7: Logging Estruturado (MAJOR)
+#### Issue #7: Logging Estruturado (MAJOR)
 - **Implementado**: Sistema completo de logging estruturado
 - **Novo arquivo**: `sql_monitor/utils/structured_logger.py` (240 linhas)
 - **Formatos**: Colored (console com ANSI), JSON (ELK/Splunk), Simple (texto)
@@ -56,7 +56,7 @@ Esta atualização resolve **todos os 5 issues críticos** e **1 issue major** i
 - **Integração**: Exemplos no `multi_monitor.py`, inicialização no `main.py`
 - **Benefício**: Observabilidade profunda, facilita debug e análise em produção
 
-### 📝 Novos Arquivos
+### Novos Arquivos
 - `sql_monitor/utils/credentials_resolver.py` - Sistema de secrets management
 - `sql_monitor/utils/connection_pool.py` - Infrastructure de pooling
 - `sql_monitor/utils/structured_logger.py` - Sistema de logging estruturado
@@ -64,7 +64,7 @@ Esta atualização resolve **todos os 5 issues críticos** e **1 issue major** i
 - `LOGGING.md` - Guia completo de logging estruturado
 - `FIXES_SUMMARY.md` - Resumo detalhado de todas as correções
 
-### 🔧 Arquivos Modificados
+### Arquivos Modificados
 - `sql_monitor/monitor/multi_monitor.py` - Graceful shutdown + secrets resolver
 - `sql_monitor/utils/llm_analyzer.py` - Circuit breaker implementation
 - `sql_monitor/utils/query_cache.py` - Thread-safe locks
@@ -74,13 +74,13 @@ Esta atualização resolve **todos os 5 issues críticos** e **1 issue major** i
 - `config/databases.json.example` - Uso de `${VAR_NAME}` para passwords
 - `main.py` - Adicionado `load_dotenv()`
 
-### 📊 Impacto
-- **Segurança**: 🔒 Senhas não expostas, sistema extensível de secrets
-- **Confiabilidade**: 💪 Zero perda de dados, circuit breaker protege API
-- **Concorrência**: 🔄 Cache 100% thread-safe, sem race conditions
-- **Qualidade**: ✨ Error handling não mascara bugs, melhor debugabilidade
+### Impacto
+- **Segurança**: Senhas não expostas, sistema extensível de secrets
+- **Confiabilidade**: Zero perda de dados, circuit breaker protege API
+- **Concorrência**: Cache 100% thread-safe, sem race conditions
+- **Qualidade**: Error handling não mascara bugs, melhor debugabilidade
 
-### ⚠️ Breaking Changes
+### Breaking Changes
 **Nenhum** - Todas as mudanças são retrocompatíveis. Continua funcionando com senhas em plaintext (mas emite warnings).
 
 ---
@@ -91,7 +91,7 @@ Esta atualização resolve **todos os 5 issues críticos** e **1 issue major** i
 
 Esta versão representa uma refatoração completa do projeto, transformando-o de um monitor SQL Server standalone para um monitor multi-database que suporta SQL Server, PostgreSQL e SAP HANA simultaneamente.
 
-### ✨ Novas Funcionalidades
+### Novas Funcionalidades
 
 #### Arquitetura Multi-Database
 - **Factory Pattern**: Implementado `DatabaseFactory` para criação dinâmica de componentes por tipo de banco
@@ -115,7 +115,7 @@ Esta versão representa uma refatoração completa do projeto, transformando-o d
 - **Processamento Sequencial**: Instâncias do mesmo tipo processadas sequencialmente
 - **Thread-Safe**: Sem race conditions, sem locks (cache separado por tipo)
 
-### 🔧 Mudanças Técnicas
+### Mudanças Técnicas
 
 #### Estrutura de Diretórios
 ```
@@ -166,20 +166,20 @@ sql_monitor/
 - **sql_monitor/factories/**: 1 arquivo (DatabaseFactory)
 - **sql_monitor/monitor/**: 2 arquivos (DatabaseMonitor, MultiDatabaseMonitor)
 
-### 📊 Progresso do Projeto
+### Progresso do Projeto
 
 | Fase | Status | Progresso |
 |------|--------|-----------|
-| FASE 1: Estrutura e ABCs | ✅ COMPLETA | 100% |
-| FASE 2: Migração SQL Server | ✅ COMPLETA | 100% |
-| FASE 3: PostgreSQL | ✅ COMPLETA | 100% |
-| FASE 4: SAP HANA | ✅ COMPLETA | 100% |
-| FASE 5: Factory e Orquestração | ✅ COMPLETA | 100% |
-| FASE 6: Configuração | ✅ COMPLETA | 100% |
+| FASE 1: Estrutura e ABCs | COMPLETA | 100% |
+| FASE 2: Migração SQL Server | COMPLETA | 100% |
+| FASE 3: PostgreSQL | COMPLETA | 100% |
+| FASE 4: SAP HANA | COMPLETA | 100% |
+| FASE 5: Factory e Orquestração | COMPLETA | 100% |
+| FASE 6: Configuração | COMPLETA | 100% |
 | FASE 7: Testes | ⏸️ PENDENTE | 0% |
 | **TOTAL** | **82%** | **23/28 tarefas** |
 
-### 🔜 Próximos Passos
+### Próximos Passos
 
 #### FASE 7: Testes e Validação (PRIORIDADE)
 1. **Teste SQL Server standalone**
@@ -209,13 +209,13 @@ sql_monitor/
    - Comparar outputs de todos os bancos
    - Validar análise LLM para todos os bancos
 
-### 🛡️ Segurança
+### Segurança
 
 - **Credenciais protegidas**: config/databases.json adicionado ao .gitignore
 - **Sanitização mantida**: Queries continuam sendo sanitizadas antes do envio à LLM
 - **.env simplificado**: Apenas API key do Gemini (sem credenciais de banco)
 
-### 📝 Uso
+### Uso
 
 #### Configuração Inicial
 ```bash
@@ -266,13 +266,13 @@ python main.py
 }
 ```
 
-### ⚠️ Breaking Changes
+### Breaking Changes
 
 - **main.py**: Completamente refatorado - não compatível com versão anterior
 - **Configuração**: Credenciais movidas de .env para config/databases.json
 - **Estrutura**: Código reorganizado em arquitetura modular (não afeta uso externo)
 
-### 🔍 Notas Técnicas
+### Notas Técnicas
 
 #### Cache Thread-Safe
 - Cada tipo de banco tem cache separado:
@@ -288,7 +288,7 @@ python main.py
   - Thread 2: PostgreSQL → processa PG1 → PG2 sequencialmente
   - Thread 3: HANA → processa HANA1 sequencialmente
 
-### 📚 Documentação
+### Documentação
 
 - **README.md**: Atualizado com informações sobre multi-database
 - **TASKS.md**: Atualizado com progresso real (82%)

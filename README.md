@@ -85,9 +85,9 @@ sql-performance-monitor/
 ```
 
 **Links Rápidos**:
-- 📖 [Documentação Completa](docs/README.md)
-- 🧪 [Testes](tests/README.md)
-- 🔧 [Scripts](scripts/README.md)
+- [Documentação Completa](docs/README.md)
+- [Testes](tests/README.md)
+- [Scripts](scripts/README.md)
 
 ## Principais Funcionalidades
 
@@ -729,9 +729,25 @@ Verifique:
 
 ## Documentação Adicional
 
-- [WEEKLY_OPTIMIZER.md](WEEKLY_OPTIMIZER.md) - Sistema de otimização semanal completo
-- [sql_monitor/api/README.md](sql_monitor/api/README.md) - Documentação da API REST
-- [FIXES_SUMMARY.md](FIXES_SUMMARY.md) - Histórico de correções e melhorias
+### Guias Completos
+- [Índice de Documentação](docs/README.md) - Navegação completa de toda documentação
+- [Guia de Instalação](docs/INSTALL.md) - Instalação detalhada passo a passo
+- [Guia de Configuração](docs/CONFIGURATION.md) - Todas as opções de configuração
+- [Segurança](docs/SECURITY.md) - Gerenciamento seguro de credenciais
+- [Permissões](docs/PERMISSIONS.md) - Permissões necessárias em cada banco
+
+### Funcionalidades Avançadas
+- [Otimizador Semanal](docs/WEEKLY_OPTIMIZER.md) - Sistema de otimização automática
+- [Observabilidade](docs/OBSERVABILITY.md) - Métricas e monitoramento com DuckDB
+- [Sistema de Logging](docs/LOGGING.md) - Logging estruturado e integração
+
+### Testes e Desenvolvimento
+- [Guia de Testes](docs/TESTING.md) - Como executar e contribuir com testes
+- [Histórico](docs/CHANGELOG.md) - Changelog completo do projeto
+- [Tarefas](docs/TASKS.md) - Status e progresso do desenvolvimento
+
+### API e Dashboard
+- [API REST](sql_monitor/api/README.md) - Documentação da API e dashboard web
 
 ## Licença
 

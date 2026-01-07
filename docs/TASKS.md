@@ -15,7 +15,7 @@ Projeto: Refatorar SQL Server Performance Monitor para suportar SQL Server, Post
 - [x] **1.5** Criar base_collector.py (ABC para coletores)
 - [x] **1.6** Criar base_extractor.py (ABC para extratores)
 
-**Status**: ✅ COMPLETA
+**Status**: COMPLETA
 
 ---
 
@@ -25,7 +25,7 @@ Projeto: Refatorar SQL Server Performance Monitor para suportar SQL Server, Post
 - [x] **2.2** Migrar SQL Server Collector (collectors/sqlserver_collector.py)
 - [x] **2.3** Migrar SQL Server Extractor (extractors/sqlserver_extractor.py)
 
-**Status**: ✅ COMPLETA
+**Status**: COMPLETA
 
 ---
 
@@ -41,7 +41,7 @@ Projeto: Refatorar SQL Server Performance Monitor para suportar SQL Server, Post
   - [x] Índices (pg_indexes)
   - [x] Missing indexes (sugestões baseadas em seq_scan)
 
-**Status**: ✅ COMPLETA
+**Status**: COMPLETA
 
 ---
 
@@ -57,7 +57,7 @@ Projeto: Refatorar SQL Server Performance Monitor para suportar SQL Server, Post
   - [x] Índices (SYS.INDEXES + SYS.INDEX_COLUMNS)
   - [x] Missing indexes (M_CS_TABLES)
 
-**Status**: ✅ COMPLETA
+**Status**: COMPLETA
 
 ---
 
@@ -77,7 +77,7 @@ Projeto: Refatorar SQL Server Performance Monitor para suportar SQL Server, Post
   - [x] Execução sequencial DENTRO do tipo
   - [x] Cache individual por tipo (sqlserver.json, postgresql.json, hana.json)
 
-**Status**: ✅ COMPLETA
+**Status**: COMPLETA
 
 ---
 
@@ -98,7 +98,7 @@ Projeto: Refatorar SQL Server Performance Monitor para suportar SQL Server, Post
   - [x] Usar MultiDatabaseMonitor
   - [x] Passar config_path e db_config_path
 
-**Status**: ✅ COMPLETA
+**Status**: COMPLETA
 
 ---
 
@@ -138,12 +138,12 @@ Projeto: Refatorar SQL Server Performance Monitor para suportar SQL Server, Post
 
 | Fase | Tarefas | Completas | Progresso |
 |------|---------|-----------|-----------|
-| FASE 1: Estrutura e ABCs | 6 | 6 | 100% ✅ |
-| FASE 2: Migração SQL Server | 3 | 3 | 100% ✅ |
-| FASE 3: PostgreSQL | 3 | 3 | 100% ✅ |
-| FASE 4: SAP HANA | 3 | 3 | 100% ✅ |
-| FASE 5: Factory e Orquestração | 3 | 3 | 100% ✅ |
-| FASE 6: Configuração | 5 | 5 | 100% ✅ |
+| FASE 1: Estrutura e ABCs | 6 | 6 | 100% |
+| FASE 2: Migração SQL Server | 3 | 3 | 100% |
+| FASE 3: PostgreSQL | 3 | 3 | 100% |
+| FASE 4: SAP HANA | 3 | 3 | 100% |
+| FASE 5: Factory e Orquestração | 3 | 3 | 100% |
+| FASE 6: Configuração | 5 | 5 | 100% |
 | FASE 7: Testes | 5 | 0 | 0% ⏸️ |
 | **TOTAL** | **28** | **23** | **82%** |
 
@@ -151,8 +151,8 @@ Projeto: Refatorar SQL Server Performance Monitor para suportar SQL Server, Post
 
 ## Próximos Passos
 
-1. ✅ ~~Completar FASE 1-6 (Implementação completa)~~
-2. 🔄 **FASE 7: Testes e Validação** (PRIORIDADE)
+1. ~~Completar FASE 1-6 (Implementação completa)~~
+2. **FASE 7: Testes e Validação** (PRIORIDADE)
    - Testar SQL Server standalone
    - Testar PostgreSQL standalone (requer extensão pg_stat_statements)
    - Testar SAP HANA standalone (requer servidor HANA)
@@ -177,13 +177,13 @@ Projeto: Refatorar SQL Server Performance Monitor para suportar SQL Server, Post
 
 ### Arquivos Migrados
 Componentes genéricos já copiados para `sql_monitor/utils/`:
-- ✅ performance_checker.py
-- ✅ query_sanitizer.py
-- ✅ logger.py
-- ✅ query_cache.py
-- ✅ teams_notifier.py
-- ✅ sql_formatter.py
-- ✅ llm_analyzer.py
+- performance_checker.py
+- query_sanitizer.py
+- logger.py
+- query_cache.py
+- teams_notifier.py
+- sql_formatter.py
+- llm_analyzer.py
 
 ---
 

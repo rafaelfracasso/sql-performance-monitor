@@ -2,14 +2,14 @@
 
 Este documento descreve todas as opções de configuração disponíveis e como validá-las.
 
-## 📋 Arquivos de Configuração
+## Arquivos de Configuração
 
 O projeto usa 2 arquivos principais de configuração:
 
 1. **`config.json`** - Configurações gerais do monitor
 2. **`config/databases.json`** - Configuração de databases a monitorar
 
-## ✅ Validação de Configuração
+## Validação de Configuração
 
 O projeto inclui **validação automática com Pydantic** que garante que:
 - Todos os campos obrigatórios estão presentes
@@ -29,14 +29,14 @@ python validate_config.py --databases custom_db.json
 ```
 
 O validador mostra:
-- ✅ Configurações válidas
-- ❌ Erros encontrados
-- ⚠️  Avisos de segurança (senhas em plaintext)
-- 📊 Resumo da configuração
+- Configurações válidas
+- Erros encontrados
+- Avisos de segurança (senhas em plaintext)
+- Resumo da configuração
 
 ---
 
-## 📄 config.json
+## config.json
 
 ### Estrutura Completa
 
@@ -166,7 +166,7 @@ Integração com Microsoft Teams via Power Automate.
 | `priority_filter` | array | [] | Filtro por prioridade (vazio=todas) |
 | `timeout` | int | 10 | Timeout de requisição (seg) |
 
-⚠️ **Importante**: Se `enabled: true`, então `webhook_url` é obrigatório.
+**Importante**: Se `enabled: true`, então `webhook_url` é obrigatório.
 
 #### timeouts
 Timeouts de operações.
@@ -196,7 +196,7 @@ Configuração de logging estruturado.
 
 ---
 
-## 📄 config/databases.json
+## config/databases.json
 
 ### Estrutura
 
@@ -264,35 +264,35 @@ Configuração de logging estruturado.
 | `password` | string | Sim | Senha (use ${VAR_NAME}) |
 | `driver` | string | Não | Driver ODBC (apenas SQL Server) |
 
-⚠️ **Importante**: Use variáveis de ambiente para senhas: `"password": "${SQL_SERVER_PROD_PASSWORD}"`
+**Importante**: Use variáveis de ambiente para senhas: `"password": "${SQL_SERVER_PROD_PASSWORD}"`
 
 ### Validações Automáticas
 
 1. **Pelo menos 1 database habilitado**
    ```
-   ❌ Erro: Pelo menos um database deve estar habilitado (enabled: true)
+   Erro: Pelo menos um database deve estar habilitado (enabled: true)
    ```
 
 2. **Tipo válido**
    ```
-   ❌ Erro: type deve ser SQLSERVER, POSTGRESQL ou HANA
+   Erro: type deve ser SQLSERVER, POSTGRESQL ou HANA
    ```
 
 3. **Porta válida**
    ```
-   ❌ Erro: Porta deve estar entre 1-65535, recebido: 99999
+   Erro: Porta deve estar entre 1-65535, recebido: 99999
    ```
 
 4. **Campos obrigatórios**
    ```
-   ❌ Erro: Field required [type=missing, input_value=...]
+   Erro: Field required [type=missing, input_value=...]
    ```
 
 ---
 
-## 🧪 Exemplos de Validação
+## Exemplos de Validação
 
-### Sucesso ✅
+### Sucesso 
 
 ```bash
 $ python validate_config.py
@@ -301,9 +301,9 @@ $ python validate_config.py
 Validando: config.json
 ================================================================================
 
-✅ config.json está válido!
+config.json está válido!
 
-📊 Resumo da Configuração:
+Resumo da Configuração:
   • Intervalo de monitoramento: 60s
   • Modelo LLM: gemini-2.0-flash-exp
   • Temperatura: 0.1
@@ -318,31 +318,31 @@ Validando: config.json
 Validando: config/databases.json
 ================================================================================
 
-✅ databases.json está válido!
+databases.json está válido!
 
-📊 Resumo de Databases:
+Resumo de Databases:
   • Total configurados: 3
   • Habilitados: 2
   • Desabilitados: 1
 
-📋 Databases Habilitados:
-  🟢 🔒 SQL Server - Produção (SQLSERVER) - sqlserver-prod.com:1433
-  🟢 🔒 PostgreSQL - Produção (POSTGRESQL) - postgresql-prod.com:5432
+Databases Habilitados:
+  SQL Server - Produção (SQLSERVER) - sqlserver-prod.com:1433
+  PostgreSQL - Produção (POSTGRESQL) - postgresql-prod.com:5432
 
-📋 Databases Desabilitados:
-  🔴 SAP HANA - Produção (HANA)
+Databases Desabilitados:
+  SAP HANA - Produção (HANA)
 
 ================================================================================
 RESULTADO DA VALIDAÇÃO
 ================================================================================
 
-✅ Todas as configurações estão válidas!
+Todas as configurações estão válidas!
 
-🚀 Você está pronto para executar o monitor:
+Você está pronto para executar o monitor:
    python main.py
 ```
 
-### Erro ❌
+### Erro 
 
 ```bash
 $ python validate_config.py
@@ -351,18 +351,18 @@ $ python validate_config.py
 Validando: config.json
 ================================================================================
 
-❌ Erro de validação:
+Erro de validação:
 
 1 validation error for Config
 llm -> temperature
   Input should be less than or equal to 2.0 [type=less_than_equal]
 
-💡 Dica: Corrija os erros acima e tente novamente
+Dica: Corrija os erros acima e tente novamente
 ```
 
 ---
 
-## 🔍 Dicas de Troubleshooting
+## Dicas de Troubleshooting
 
 ### Erro: "Field required"
 
@@ -391,7 +391,7 @@ llm -> temperature
 
 ---
 
-## 📚 Referências
+## Referências
 
 - [SECURITY.md](SECURITY.md) - Guia de segurança e secrets management
 - [LOGGING.md](LOGGING.md) - Guia de logging estruturado

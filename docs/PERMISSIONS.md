@@ -339,10 +339,10 @@ LIMIT 10;
 
 O usuário de monitoramento deve ter **apenas** as permissões necessárias:
 
-- ✅ **Somente leitura** (SELECT, VIEW)
-- ✅ **Sem permissões de escrita** (INSERT, UPDATE, DELETE)
-- ✅ **Sem permissões administrativas** (DROP, ALTER, CREATE)
-- ✅ **Sem acesso a dados sensíveis** (usar sanitização de queries)
+- **Somente leitura** (SELECT, VIEW)
+- **Sem permissões de escrita** (INSERT, UPDATE, DELETE)
+- **Sem permissões administrativas** (DROP, ALTER, CREATE)
+- **Sem acesso a dados sensíveis** (usar sanitização de queries)
 
 ### Isolamento
 

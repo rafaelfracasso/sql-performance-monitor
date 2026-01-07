@@ -2,17 +2,17 @@
 
 Este documento explica o sistema de logging estruturado implementado no projeto.
 
-## 📊 Visão Geral
+## Visão Geral
 
 O projeto implementa um sistema de logging estruturado com:
-- ✅ Múltiplos níveis (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-- ✅ Múltiplos formatos (colored, json, simple)
-- ✅ Suporte a structured logging (campos extras)
-- ✅ Saída para console e arquivo
-- ✅ Cores ANSI no console para melhor legibilidade
-- ✅ Formato JSON para integração com ELK, Splunk, etc.
+- Múltiplos níveis (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+- Múltiplos formatos (colored, json, simple)
+- Suporte a structured logging (campos extras)
+- Saída para console e arquivo
+- Cores ANSI no console para melhor legibilidade
+- Formato JSON para integração com ELK, Splunk, etc.
 
-## ⚙️ Configuração
+## Configuração
 
 ### config.json
 
@@ -36,7 +36,7 @@ O projeto implementa um sistema de logging estruturado com:
 - `log_file`: Caminho para arquivo de log (sempre usa JSON)
 - `enable_console`: true/false
 
-## 🚀 Como Usar
+## Como Usar
 
 ### 1. Logger Simples (compatível com logging padrão)
 
@@ -103,7 +103,7 @@ logger.info("Ciclo completo", queries_found=10)
 logger.clear_context()
 ```
 
-## 📝 Formatos de Saída
+## Formatos de Saída
 
 ### Colored (Console - Desenvolvimento)
 
@@ -137,7 +137,7 @@ logger.clear_context()
 2025-12-23 10:30:45 - sql_monitor.monitor.multi_monitor - INFO - Monitor inicializado
 ```
 
-## 🎯 Quando Usar Cada Nível
+## Quando Usar Cada Nível
 
 ### DEBUG
 Informações detalhadas para diagnóstico:
@@ -194,7 +194,7 @@ logger.critical("Todos os databases falharam",
                exc_info=True)
 ```
 
-## 📊 Padrões de Uso
+## Padrões de Uso
 
 ### 1. Performance Logging
 
@@ -271,7 +271,7 @@ else:
                 query_hash="abc123")
 ```
 
-## 🔍 Análise de Logs
+## Análise de Logs
 
 ### Grep no formato colored
 
@@ -310,15 +310,15 @@ jq -s 'group_by(.level) | map({level: .[0].level, count: length})' logs/monitor.
    - Erros por database
    - Performance por operação
 
-## 🚀 Migration Guide
+## Migration Guide
 
 ### De print() para logger
 
 **Antes**:
 ```python
-print(f"✓ Monitor iniciado: {name}")
-print(f"⚠️  Cache hit ratio baixo: {ratio}")
-print(f"✗ Erro ao conectar: {e}")
+print(f"Monitor iniciado: {name}")
+print(f"Cache hit ratio baixo: {ratio}")
+print(f"Erro ao conectar: {e}")
 ```
 
 **Depois**:
@@ -343,18 +343,18 @@ logger.info("Sistema iniciado",
            databases_configured=3)
 ```
 
-## 📈 Best Practices
+## Best Practices
 
-1. ✅ **Use structured fields** em vez de strings interpoladas
-2. ✅ **Inclua contexto** relevante (database, query_hash, etc)
-3. ✅ **Use níveis apropriados** (não use ERROR para warnings)
-4. ✅ **Adicione exc_info=True** em logs de exception
-5. ✅ **Evite logar dados sensíveis** (senhas, PII)
-6. ✅ **Use logger.set_context()** para campos repetidos
-7. ❌ **Não logue em loops intensivos** (use sampling)
-8. ❌ **Não logue queries completas** (use query_hash)
+1. **Use structured fields** em vez de strings interpoladas
+2. **Inclua contexto** relevante (database, query_hash, etc)
+3. **Use níveis apropriados** (não use ERROR para warnings)
+4. **Adicione exc_info=True** em logs de exception
+5. **Evite logar dados sensíveis** (senhas, PII)
+6. **Use logger.set_context()** para campos repetidos
+7. **Não logue em loops intensivos** (use sampling)
+8. **Não logue queries completas** (use query_hash)
 
-## 🔒 Segurança
+## Segurança
 
 **NUNCA logue**:
 - Senhas

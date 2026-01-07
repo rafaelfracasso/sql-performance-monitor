@@ -6,18 +6,18 @@
 
 ---
 
-## 📊 Resumo Executivo
+## Resumo Executivo
 
 | Categoria | Status | Detalhes |
 |-----------|--------|----------|
-| **Componentes Core** | ✅ PASSOU | 5/5 componentes funcionando |
-| **Database Factory** | ✅ PASSOU | Factory criada e funcionando |
-| **Utilities** | ⚠️ PARCIAL | Componentes principais OK, testes precisam ajuste |
-| **Conexões de Banco** | ⏭️ PULADO | Sem credenciais configuradas |
+| **Componentes Core** | PASSOU | 5/5 componentes funcionando |
+| **Database Factory** | PASSOU | Factory criada e funcionando |
+| **Utilities** | PARCIAL | Componentes principais OK, testes precisam ajuste |
+| **Conexões de Banco** | PULADO | Sem credenciais configuradas |
 
 ---
 
-## ✅ Testes Executados com Sucesso
+## Testes Executados com Sucesso
 
 ### 1. Componentes Core (5/5 PASSOU)
 
@@ -27,11 +27,11 @@ python -c "teste rápido de componentes"
 ```
 
 **Resultados**:
-- ✅ **DatabaseTypes**: Enum funcionando (SQLSERVER, POSTGRESQL, HANA)
-- ✅ **DatabaseFactory**: Factory criada, suporta 3 bancos
-- ✅ **CredentialsResolver**: Resolução de variáveis ${VAR} funcionando
-- ✅ **QueryCache**: Cache criado com TTL de 24h
-- ✅ **QuerySanitizer**: Sanitização de queries funcionando
+- **DatabaseTypes**: Enum funcionando (SQLSERVER, POSTGRESQL, HANA)
+- **DatabaseFactory**: Factory criada, suporta 3 bancos
+- **CredentialsResolver**: Resolução de variáveis ${VAR} funcionando
+- **QueryCache**: Cache criado com TTL de 24h
+- **QuerySanitizer**: Sanitização de queries funcionando
 
 **Saída**:
 ```
@@ -39,26 +39,26 @@ python -c "teste rápido de componentes"
 TESTE RÁPIDO - COMPONENTES DO SISTEMA
 ================================================================================
 
-1️⃣  Testando DatabaseTypes...
-   ✓ DatabaseType.SQLSERVER = sqlserver
-   ✓ DatabaseType.POSTGRESQL = postgresql
-   ✓ DatabaseType.HANA = hana
+Testando DatabaseTypes...
+   DatabaseType.SQLSERVER = sqlserver
+   DatabaseType.POSTGRESQL = postgresql
+   DatabaseType.HANA = hana
 
-2️⃣  Testando DatabaseFactory...
-   ✓ Bancos suportados: ['sqlserver', 'postgresql', 'hana']
+Testando DatabaseFactory...
+   Bancos suportados: ['sqlserver', 'postgresql', 'hana']
 
-3️⃣  Testando CredentialsResolver...
-   ✓ Resolução: {'password': 'test_value'}
+Testando CredentialsResolver...
+   Resolução: {'password': 'test_value'}
 
-4️⃣  Testando QueryCache...
-   ✓ Cache criado: enabled=True, ttl=24h
+Testando QueryCache...
+   Cache criado: enabled=True, ttl=24h
 
-5️⃣  Testando QuerySanitizer...
-   ✓ Query original: SELECT * FROM users WHERE id = 123
-   ✓ Query sanitizada: SELECT * FROM users WHERE id = {}1_INT...
+Testando QuerySanitizer...
+   Query original: SELECT * FROM users WHERE id = 123
+   Query sanitizada: SELECT * FROM users WHERE id = {}1_INT...
 
 ================================================================================
-✅ TODOS OS COMPONENTES FUNCIONANDO!
+TODOS OS COMPONENTES FUNCIONANDO!
 ================================================================================
 ```
 
@@ -72,10 +72,10 @@ python test_factory.py
 ```
 
 **Resultados**:
-- ✅ **Métodos auxiliares**: get_supported_databases(), is_supported()
-- ⚠️ **HANA NotImplementedError**: Teste esperava erro, mas HANA está implementado
-- ⏭️ **SQL Server**: Pulado (sem credenciais)
-- ⏭️ **PostgreSQL**: Pulado (sem credenciais)
+- **Métodos auxiliares**: get_supported_databases(), is_supported()
+- **HANA NotImplementedError**: Teste esperava erro, mas HANA está implementado
+- **SQL Server**: Pulado (sem credenciais)
+- **PostgreSQL**: Pulado (sem credenciais)
 
 **Saída**:
 ```
@@ -93,21 +93,21 @@ Verificando suporte:
    PostgreSQL suportado: True
    HANA suportado: True
 
-⚠️  Credenciais SQL Server não configuradas, pulando teste
-⚠️  Credenciais PostgreSQL não configuradas, pulando teste
+Credenciais SQL Server não configuradas, pulando teste
+Credenciais PostgreSQL não configuradas, pulando teste
 
 ================================================================================
 RESUMO DOS TESTES
 ================================================================================
-✓ PASSOU: Métodos auxiliares
-✗ FALHOU: HANA NotImplementedError (esperado erro, mas está implementado)
+PASSOU: Métodos auxiliares
+FALHOU: HANA NotImplementedError (esperado erro, mas está implementado)
 
 Total: 1/2 testes passaram
 ```
 
 ---
 
-## ⚠️ Testes que Precisam de Ajustes
+## Testes que Precisam de Ajustes
 
 ### 3. test_utils.py
 
@@ -131,7 +131,7 @@ Total: 1/2 testes passaram
    - Precisa verificar assinatura correta
 
 **Componentes que FUNCIONAM**:
-- ✅ **CredentialsResolver**: 5/5 testes passaram
+- **CredentialsResolver**: 5/5 testes passaram
   - Resolução de variáveis simples
   - Múltiplas variáveis
   - Valores literais
@@ -140,7 +140,7 @@ Total: 1/2 testes passaram
 
 ---
 
-## ⏭️ Testes Não Executados
+## Testes Não Executados
 
 ### Motivo: Sem Credenciais de Banco Configuradas
 
@@ -174,7 +174,7 @@ HANA_PASSWORD=sua_senha
 
 ---
 
-## 🔧 Dependências Instaladas
+## Dependências Instaladas
 
 Durante a execução dos testes, foram instaladas:
 ```bash
@@ -200,7 +200,7 @@ unixodbc-dev
 
 ---
 
-## 🐛 Problemas Encontrados e Resolvidos
+## Problemas Encontrados e Resolvidos
 
 ### 1. ModuleNotFoundError: dotenv
 **Problema**: `python-dotenv` não instalado
@@ -224,31 +224,31 @@ unixodbc-dev
 
 ---
 
-## 📈 Métricas de Cobertura
+## Métricas de Cobertura
 
 ### Componentes Testados
 
 | Componente | Testado | Status |
 |------------|---------|--------|
-| DatabaseTypes | ✅ | Funcionando |
-| DatabaseFactory | ✅ | Funcionando |
-| CredentialsResolver | ✅ | Funcionando (5/5 testes) |
-| QueryCache | ✅ | Funcionando (API verificada) |
-| QuerySanitizer | ✅ | Funcionando |
-| SQLServerConnection | ⏭️ | Requer credenciais |
-| PostgreSQLConnection | ⏭️ | Requer credenciais |
-| HANAConnection | ⏭️ | Requer credenciais |
-| MultiDatabaseMonitor | ⏭️ | Requer credenciais |
+| DatabaseTypes | | Funcionando |
+| DatabaseFactory | | Funcionando |
+| CredentialsResolver | | Funcionando (5/5 testes) |
+| QueryCache | | Funcionando (API verificada) |
+| QuerySanitizer | | Funcionando |
+| SQLServerConnection | | Requer credenciais |
+| PostgreSQLConnection | | Requer credenciais |
+| HANAConnection | | Requer credenciais |
+| MultiDatabaseMonitor | | Requer credenciais |
 
 ### Taxa de Sucesso (Sem Dependências Externas)
 
-- **Componentes Core**: 5/5 (100%) ✅
-- **Database Factory**: 1/2 (50%) ⚠️
-- **Utilities**: 1/6 (17%) ⚠️ (apenas CredentialsResolver testado completamente)
+- **Componentes Core**: 5/5 (100%) 
+- **Database Factory**: 1/2 (50%)
+- **Utilities**: 1/6 (17%) (apenas CredentialsResolver testado completamente)
 
 ---
 
-## 🎯 Próximos Passos
+## Próximos Passos
 
 ### Para Execução Completa dos Testes
 
@@ -276,9 +276,9 @@ unixodbc-dev
 
 ---
 
-## 📝 Conclusão
+## Conclusão
 
-**Status Atual**: ✅ **Infraestrutura de testes funcional**
+**Status Atual**: **Infraestrutura de testes funcional**
 
 - Todos os componentes core estão funcionando corretamente
 - DatabaseFactory criada e operacional

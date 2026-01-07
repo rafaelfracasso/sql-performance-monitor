@@ -2,7 +2,7 @@
 
 Este diretório contém scripts auxiliares para manutenção e configuração do sistema.
 
-## 📁 Estrutura
+## Estrutura
 
 ```
 scripts/
@@ -10,7 +10,7 @@ scripts/
 └── validate_config.py      # Validador de arquivos de configuração
 ```
 
-## 📜 Scripts Disponíveis
+## Scripts Disponíveis
 
 ### validate_config.py
 
@@ -31,13 +31,13 @@ python scripts/validate_config.py
 
 **Saída de exemplo**:
 ```
-✓ config.json válido
-✓ config/databases.json válido
-✓ 3 bancos configurados
-⚠️ SQL_PASSWORD não definida (usando plaintext)
+config.json válido
+config/databases.json válido
+3 bancos configurados
+SQL_PASSWORD não definida (usando plaintext)
 ```
 
-## 🔧 Adicionar Novos Scripts
+## Adicionar Novos Scripts
 
 Ao adicionar um novo script:
 
@@ -63,7 +63,7 @@ Ao adicionar um novo script:
 
 4. **Adicionar ao .gitignore** se gerar arquivos temporários
 
-## 🎯 Boas Práticas
+## Boas Práticas
 
 ### Estrutura de um Script
 
@@ -102,7 +102,7 @@ if __name__ == '__main__':
 - [ ] Documentado no README
 - [ ] Testado antes de commitar
 
-## 🚀 Exemplos de Uso
+## Exemplos de Uso
 
 ### Validar configuração antes de deploy
 ```bash
@@ -116,7 +116,7 @@ python scripts/validate_config.py && python main.py
   run: python scripts/validate_config.py
 ```
 
-## 📚 Documentação
+## Documentação
 
 Para mais detalhes sobre configuração:
 - `docs/CONFIGURATION.md` - Guia de configuração

@@ -373,7 +373,7 @@ Sistema envia 3 tipos de Adaptive Cards:
 
 ```
 ┌─────────────────────────────────────┐
-│ 📊 Plano Semanal de Otimização Gerado │
+│ Plano Semanal de Otimização Gerado │
 │                                     │
 │ Plano ID: 20251229_180000           │
 │                                     │
@@ -396,7 +396,7 @@ Sistema envia 3 tipos de Adaptive Cards:
 
 ```
 ┌─────────────────────────────────────┐
-│ ✅ Plano de Otimização Executado    │
+│ Plano de Otimização Executado    │
 │                                     │
 │ Executado em: 01/01/2025 04:30      │
 │                                     │
@@ -416,7 +416,7 @@ Sistema envia 3 tipos de Adaptive Cards:
 
 ```
 ┌─────────────────────────────────────┐
-│ 📈 Relatório de Impacto Semanal     │
+│ Relatório de Impacto Semanal     │
 │                                     │
 │ Taxa de sucesso: 92.9%              │
 │                                     │
@@ -607,25 +607,25 @@ print(summary)
 ## Segurança e Validações
 
 ### Pré-Execução
-- ✅ Verificar conexões com todos os bancos
-- ✅ Validar espaço em disco (mínimo configurável)
-- ✅ Confirmar que não há vetos ativos
-- ✅ Capturar baseline de métricas
-- ✅ Verificar janela de veto expirada
+- Verificar conexões com todos os bancos
+- Validar espaço em disco (mínimo configurável)
+- Confirmar que não há vetos ativos
+- Capturar baseline de métricas
+- Verificar janela de veto expirada
 
 ### Durante Execução
-- ✅ Timeout de segurança por otimização
-- ✅ Intervalo de 5 minutos entre otimizações
-- ✅ Monitoramento de métricas em tempo real
-- ✅ Log detalhado de cada passo
-- ✅ Execução por ordem de prioridade
+- Timeout de segurança por otimização
+- Intervalo de 5 minutos entre otimizações
+- Monitoramento de métricas em tempo real
+- Log detalhado de cada passo
+- Execução por ordem de prioridade
 
 ### Pós-Execução
-- ✅ Comparar métricas antes/depois
-- ✅ Rollback automático se degradação >20%
-- ✅ Validar integridade de dados (via connector)
-- ✅ Notificar Teams com resultado
-- ✅ Registro permanente no DuckDB
+- Comparar métricas antes/depois
+- Rollback automático se degradação >20%
+- Validar integridade de dados (via connector)
+- Notificar Teams com resultado
+- Registro permanente no DuckDB
 
 ## Troubleshooting
 

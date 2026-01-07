@@ -2,12 +2,12 @@
 
 Este guia cobre a instalação completa do Multi-Database Monitor do zero.
 
-## 📋 Requisitos
+## Requisitos
 
 ### Sistema Operacional
-- ✅ Linux (Ubuntu 20.04+, CentOS 8+, etc)
-- ✅ macOS (10.15+)
-- ✅ Windows 10/11 (com WSL2 recomendado)
+- Linux (Ubuntu 20.04+, CentOS 8+, etc)
+- macOS (10.15+)
+- Windows 10/11 (com WSL2 recomendado)
 
 ### Software Necessário
 
@@ -34,7 +34,7 @@ python --version
 
 ---
 
-## 🚀 Instalação Rápida
+## Instalação Rápida
 
 ### 1. Clonar Repositório
 
@@ -177,8 +177,8 @@ python validate_config.py
 Se tudo estiver correto, você verá:
 
 ```
-✅ Todas as configurações estão válidas!
-🚀 Você está pronto para executar o monitor
+Todas as configurações estão válidas!
+Você está pronto para executar o monitor
 ```
 
 ### 9. Executar o Monitor
@@ -190,7 +190,7 @@ python main.py
 
 ---
 
-## 🔧 Instalação Detalhada por SO
+## Instalação Detalhada por SO
 
 ### Ubuntu 20.04/22.04
 
@@ -308,7 +308,7 @@ python main.py
 
 ---
 
-## 🐳 Docker (Alternativa)
+## Docker (Alternativa)
 
 ```bash
 # Criar Dockerfile
@@ -355,16 +355,16 @@ docker run -it --rm \
 
 ---
 
-## ✅ Verificação Pós-Instalação
+## Verificação Pós-Instalação
 
 ### 1. Testar Python e Dependências
 
 ```bash
-python -c "import pyodbc; print('✅ pyodbc OK')"
-python -c "import psycopg2; print('✅ psycopg2 OK')"
-python -c "import hdbcli; print('✅ hdbcli OK')"
-python -c "import google.genai; print('✅ google-genai OK')"
-python -c "import pydantic; print('✅ pydantic OK')"
+python -c "import pyodbc; print('pyodbc OK')"
+python -c "import psycopg2; print('psycopg2 OK')"
+python -c "import hdbcli; print('hdbcli OK')"
+python -c "import google.genai; print('google-genai OK')"
+python -c "import pydantic; print('pydantic OK')"
 ```
 
 ### 2. Testar Drivers ODBC
@@ -394,7 +394,7 @@ python main.py
 
 ---
 
-## 🚨 Troubleshooting
+## Troubleshooting
 
 ### Erro: "No module named 'pyodbc'"
 
@@ -430,7 +430,7 @@ echo "GEMINI_API_KEY=sua_chave_aqui" >> .env
 
 ---
 
-## 📚 Próximos Passos
+## Próximos Passos
 
 Após instalação bem-sucedida:
 
@@ -451,6 +451,6 @@ Se encontrar problemas:
 
 ---
 
-**Instalação concluída! 🎉**
+**Instalação concluída!**
 
 Execute `python main.py` para iniciar o monitor.

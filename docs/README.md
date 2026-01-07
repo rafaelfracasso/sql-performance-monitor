@@ -2,33 +2,33 @@
 
 Documentação completa do projeto SQL Performance Monitor.
 
-## 📚 Índice
+## Índice
 
-### 🚀 Primeiros Passos
+### Primeiros Passos
 - **[../README.md](../README.md)** - Visão geral do projeto e início rápido
 - **[INSTALL.md](INSTALL.md)** - Guia de instalação e configuração inicial
 
-### ⚙️ Configuração
+### Configuração
 - **[CONFIGURATION.md](CONFIGURATION.md)** - Configurações detalhadas (config.json, databases.json)
 - **[SECURITY.md](SECURITY.md)** - Segurança e gerenciamento de credenciais
 - **[PERMISSIONS.md](PERMISSIONS.md)** - Permissões necessárias nos bancos de dados
 
-### 🔍 Monitoramento
+### Monitoramento
 - **[OBSERVABILITY.md](OBSERVABILITY.md)** - Observabilidade, métricas e monitoramento
 - **[LOGGING.md](LOGGING.md)** - Sistema de logging estruturado
 - **[WEEKLY_OPTIMIZER.md](WEEKLY_OPTIMIZER.md)** - Otimizador semanal automático
 
-### 🧪 Testes
+### Testes
 - **[TESTING.md](TESTING.md)** - Guia completo de testes
 - **[TEST_RESULTS.md](TEST_RESULTS.md)** - Resultados da última execução de testes
 
-### 📝 Histórico
+### Histórico
 - **[CHANGELOG.md](CHANGELOG.md)** - Histórico de mudanças e versões
 - **[TASKS.md](TASKS.md)** - Tarefas e progresso do projeto
 
 ---
 
-## 📖 Documentação por Categoria
+## Documentação por Categoria
 
 ### Para Iniciantes
 
@@ -60,7 +60,7 @@ Documentação completa do projeto SQL Performance Monitor.
 
 ---
 
-## 🎯 Guias Rápidos
+## Guias Rápidos
 
 ### Como configurar um novo banco de dados
 
@@ -148,7 +148,7 @@ Documentação completa do projeto SQL Performance Monitor.
 
 ---
 
-## 📊 Arquivos de Documentação
+## Arquivos de Documentação
 
 ### CHANGELOG.md
 Histórico de todas as mudanças, versões e features adicionadas ao projeto.
@@ -207,7 +207,7 @@ Documentação do otimizador semanal automático e sistema de aprovação de mud
 
 ---
 
-## 🔗 Links Externos
+## Links Externos
 
 - **Repositório**: https://github.com/rafaelfracasso/sql-performance-monitor
 - **Issues**: https://github.com/rafaelfracasso/sql-performance-monitor/issues
@@ -215,7 +215,7 @@ Documentação do otimizador semanal automático e sistema de aprovação de mud
 
 ---
 
-## 🤝 Contribuindo
+## Contribuindo
 
 Para contribuir com a documentação:
 
@@ -227,7 +227,7 @@ Para contribuir com a documentação:
 
 - Use Markdown (GitHub-flavored)
 - Mantenha linhas < 120 caracteres
-- Use emojis para seções (📚 🎯 ⚙️ etc)
+- Não use emojis em documentação
 - Inclua exemplos práticos
 - Mantenha atualizado (adicione data de atualização)
 

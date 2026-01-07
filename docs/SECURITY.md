@@ -2,14 +2,14 @@
 
 Este documento descreve as práticas de segurança implementadas no projeto e como configurar credenciais de forma segura.
 
-## 🔐 Sistema de Secrets Management
+## Sistema de Secrets Management
 
 ### Problema: Senhas em Plaintext
 
 **NUNCA** armazene senhas em plaintext em arquivos de configuração:
 
 ```json
-❌ ERRADO - Vulnerabilidade de segurança:
+ERRADO - Vulnerabilidade de segurança:
 {
   "credentials": {
     "password": "minha_senha_123"
@@ -22,7 +22,7 @@ Este documento descreve as práticas de segurança implementadas no projeto e co
 Use variáveis de ambiente para armazenar credenciais sensíveis:
 
 ```json
-✅ CORRETO - Seguro:
+CORRETO - Seguro:
 {
   "credentials": {
     "password": "${SQL_SERVER_PROD_PASSWORD}"
@@ -30,7 +30,7 @@ Use variáveis de ambiente para armazenar credenciais sensíveis:
 }
 ```
 
-## 🚀 Como Configurar Credenciais
+## Como Configurar Credenciais
 
 ### 1. Configure Variáveis de Ambiente
 
@@ -109,7 +109,7 @@ O sistema automaticamente:
 3. Valida se todas as variáveis necessárias existem
 4. **Gera warning** se detectar senhas em plaintext
 
-## 📋 Sintaxe de Referências
+## Sintaxe de Referências
 
 ### Formato Básico
 
@@ -121,9 +121,9 @@ ${NOME_DA_VARIAVEL}
 
 ```json
 {
-  "password": "${SQL_PASSWORD}",          // ✅ Simples
-  "username": "${DB_USER}",               // ✅ Qualquer campo
-  "server": "db-${ENVIRONMENT}.com"      // ✅ Interpolação
+  "password": "${SQL_PASSWORD}",          // Simples
+  "username": "${DB_USER}",               // Qualquer campo
+  "server": "db-${ENVIRONMENT}.com"      // Interpolação
 }
 ```
 
@@ -132,20 +132,20 @@ ${NOME_DA_VARIAVEL}
 Se uma variável de ambiente não existir, você verá:
 
 ```
-✗ Erro ao resolver credenciais de SQL Server - Produção:
+Erro ao resolver credenciais de SQL Server - Produção:
 Variável de ambiente 'SQL_SERVER_PROD_PASSWORD' não encontrada.
 Configure-a antes de executar o monitor.
 Exemplo: export SQL_SERVER_PROD_PASSWORD='sua_senha_aqui'
 ```
 
-## ⚠️ Avisos de Segurança
+## Avisos de Segurança
 
 ### Detecção de Plaintext
 
 O sistema detecta automaticamente senhas em plaintext e gera warnings:
 
 ```
-⚠️  AVISO DE SEGURANÇA: Senha em plaintext detectada!
+AVISO DE SEGURANÇA: Senha em plaintext detectada!
 Use variáveis de ambiente: password: '${SQL_PASSWORD}'
 ```
 
@@ -163,7 +163,7 @@ config/databases.json
 config/databases.json.example
 ```
 
-## 🏢 Ambientes de Produção
+## Ambientes de Produção
 
 Para ambientes de produção, considere usar:
 
@@ -205,20 +205,20 @@ vault kv put secret/database password=Senha@Forte123!
 vault kv get -field=password secret/database
 ```
 
-## 🔍 Checklist de Segurança
+## Checklist de Segurança
 
 Antes de fazer deploy, verifique:
 
-- [ ] ✅ Todas as senhas usam `${VAR_NAME}` em `databases.json`
-- [ ] ✅ Arquivo `.env` está no `.gitignore`
-- [ ] ✅ Arquivo `config/databases.json` está no `.gitignore`
-- [ ] ✅ Variáveis de ambiente configuradas no servidor de produção
-- [ ] ✅ Nenhum warning de plaintext é exibido ao iniciar
-- [ ] ✅ Senhas fortes (mínimo 12 caracteres, maiúsculas, números, símbolos)
-- [ ] ✅ Credenciais rotacionadas regularmente
-- [ ] ✅ Acesso ao servidor limitado (firewall, VPN)
+- [ ] Todas as senhas usam `${VAR_NAME}` em `databases.json`
+- [ ] Arquivo `.env` está no `.gitignore`
+- [ ] Arquivo `config/databases.json` está no `.gitignore`
+- [ ] Variáveis de ambiente configuradas no servidor de produção
+- [ ] Nenhum warning de plaintext é exibido ao iniciar
+- [ ] Senhas fortes (mínimo 12 caracteres, maiúsculas, números, símbolos)
+- [ ] Credenciais rotacionadas regularmente
+- [ ] Acesso ao servidor limitado (firewall, VPN)
 
-## 🛡️ Outras Práticas de Segurança
+## Outras Práticas de Segurança
 
 ### 1. Sanitização de Queries
 
@@ -248,7 +248,7 @@ O usuário de monitoramento deve ter **apenas**:
 
 Consulte [PERMISSIONS.md](PERMISSIONS.md) para detalhes.
 
-## 📚 Referências
+## Referências
 
 - [OWASP - Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
 - [12-Factor App - Config](https://12factor.net/config)

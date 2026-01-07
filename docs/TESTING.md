@@ -6,7 +6,7 @@ Documentação completa dos testes do sistema de monitoramento multi-database.
 
 ---
 
-## 📋 Índice
+## Índice
 
 1. [Visão Geral](#visão-geral)
 2. [Estrutura de Testes](#estrutura-de-testes)
@@ -18,14 +18,14 @@ Documentação completa dos testes do sistema de monitoramento multi-database.
 
 ---
 
-## 🎯 Visão Geral
+## Visão Geral
 
 A suite de testes do SQL Performance Monitor cobre:
 
-- ✅ **Testes unitários**: Componentes individuais (Factory, Connection, Collector, Extractor)
-- ✅ **Testes de integração**: Pipeline completo end-to-end
-- ✅ **Testes de utilities**: Cache, sanitizer, performance checker, etc.
-- ✅ **Testes multi-database**: Execução simultânea de múltiplos bancos
+- **Testes unitários**: Componentes individuais (Factory, Connection, Collector, Extractor)
+- **Testes de integração**: Pipeline completo end-to-end
+- **Testes de utilities**: Cache, sanitizer, performance checker, etc.
+- **Testes multi-database**: Execução simultânea de múltiplos bancos
 
 ### Estatísticas
 
@@ -39,7 +39,7 @@ A suite de testes do SQL Performance Monitor cobre:
 
 ---
 
-## 📁 Estrutura de Testes
+## Estrutura de Testes
 
 ```
 sql-performance-monitor/
@@ -55,7 +55,7 @@ sql-performance-monitor/
 
 ---
 
-## 🔧 Pré-requisitos
+## Pré-requisitos
 
 ### 1. Dependências Python
 
@@ -147,7 +147,7 @@ FROM sys.database_query_store_options;
 
 ---
 
-## 🚀 Como Executar
+## Como Executar
 
 ### Execução Individual
 
@@ -202,17 +202,17 @@ docker-compose -f docker-compose.test.yml down
 
 ---
 
-## 📝 Descrição dos Testes
+## Descrição dos Testes
 
 ### 1. test_factory.py
 
 **Objetivo**: Validar a DatabaseFactory
 
 **Testes**:
-- ✅ Criar componentes SQL Server via Factory
-- ✅ Criar componentes PostgreSQL via Factory
-- ✅ Verificar NotImplementedError para HANA (se não implementado)
-- ✅ Métodos auxiliares (get_supported_databases, is_supported)
+- Criar componentes SQL Server via Factory
+- Criar componentes PostgreSQL via Factory
+- Verificar NotImplementedError para HANA (se não implementado)
+- Métodos auxiliares (get_supported_databases, is_supported)
 
 **Execução**:
 ```bash
@@ -221,14 +221,14 @@ python test_factory.py
 
 **Saída esperada**:
 ```
-🚀 Iniciando testes da Database Factory...
+Iniciando testes da Database Factory...
 ================================================================================
 TESTE DATABASE FACTORY - SQL SERVER
 ================================================================================
-✓ SQL Server Factory funcionando!
+SQL Server Factory funcionando!
 
 Total: 4/4 testes passaram
-✓ TODOS OS TESTES PASSARAM!
+TODOS OS TESTES PASSARAM!
 ```
 
 ---
@@ -238,16 +238,16 @@ Total: 4/4 testes passaram
 **Objetivo**: Validar conexão, collector e extractor do SQL Server
 
 **Testes**:
-- ✅ Conexão básica e test_connection()
-- ✅ Versão do SQL Server
-- ✅ Listagem de databases e schemas
-- ✅ Verificação do Query Store
-- ✅ Coleta de queries ativas
-- ✅ Coleta de expensive queries
-- ✅ Coleta de table scans
-- ✅ Extração de DDL
-- ✅ Extração de índices
-- ✅ Sugestões de missing indexes
+- Conexão básica e test_connection()
+- Versão do SQL Server
+- Listagem de databases e schemas
+- Verificação do Query Store
+- Coleta de queries ativas
+- Coleta de expensive queries
+- Coleta de table scans
+- Extração de DDL
+- Extração de índices
+- Sugestões de missing indexes
 
 **Execução**:
 ```bash
@@ -266,16 +266,16 @@ python test_sqlserver.py
 **Objetivo**: Validar conexão, collector e extractor do PostgreSQL
 
 **Testes**:
-- ✅ Conexão básica e test_connection()
-- ✅ Versão do PostgreSQL
-- ✅ Listagem de databases, schemas e extensões
-- ✅ Verificação da extensão pg_stat_statements
-- ✅ Coleta de queries ativas (pg_stat_activity)
-- ✅ Coleta de expensive queries (pg_stat_statements)
-- ✅ Coleta de table scans (pg_stat_user_tables)
-- ✅ Extração de DDL (information_schema)
-- ✅ Extração de índices (pg_indexes)
-- ✅ Sugestões de missing indexes
+- Conexão básica e test_connection()
+- Versão do PostgreSQL
+- Listagem de databases, schemas e extensões
+- Verificação da extensão pg_stat_statements
+- Coleta de queries ativas (pg_stat_activity)
+- Coleta de expensive queries (pg_stat_statements)
+- Coleta de table scans (pg_stat_user_tables)
+- Extração de DDL (information_schema)
+- Extração de índices (pg_indexes)
+- Sugestões de missing indexes
 
 **Execução**:
 ```bash
@@ -293,18 +293,18 @@ python test_postgresql.py
 **Objetivo**: Validar conexão, collector e extractor do SAP HANA
 
 **Testes**:
-- ✅ Conexão básica e test_connection()
-- ✅ Versão do SAP HANA
-- ✅ Informações do sistema (hardware, CPU)
-- ✅ Listagem de schemas
-- ✅ Uso de memória
-- ✅ Serviços ativos
-- ✅ Coleta de queries ativas (M_ACTIVE_STATEMENTS)
-- ✅ Coleta de expensive queries (M_SQL_PLAN_CACHE)
-- ✅ Coleta de table scans (M_TABLE_STATISTICS)
-- ✅ Extração de DDL (SYS.TABLE_COLUMNS)
-- ✅ Extração de índices (SYS.INDEXES)
-- ✅ Sugestões de missing indexes (M_CS_TABLES)
+- Conexão básica e test_connection()
+- Versão do SAP HANA
+- Informações do sistema (hardware, CPU)
+- Listagem de schemas
+- Uso de memória
+- Serviços ativos
+- Coleta de queries ativas (M_ACTIVE_STATEMENTS)
+- Coleta de expensive queries (M_SQL_PLAN_CACHE)
+- Coleta de table scans (M_TABLE_STATISTICS)
+- Extração de DDL (SYS.TABLE_COLUMNS)
+- Extração de índices (SYS.INDEXES)
+- Sugestões de missing indexes (M_CS_TABLES)
 
 **Execução**:
 ```bash
@@ -322,10 +322,10 @@ python test_hana.py
 **Objetivo**: Validar o MultiDatabaseMonitor
 
 **Testes**:
-- ✅ Inicialização com múltiplos bancos
-- ✅ Isolamento de cache por tipo de banco
-- ✅ Execução multithread (uma thread por tipo)
-- ✅ Ciclo único de monitoramento (opcional - demorado)
+- Inicialização com múltiplos bancos
+- Isolamento de cache por tipo de banco
+- Execução multithread (uma thread por tipo)
+- Ciclo único de monitoramento (opcional - demorado)
 
 **Execução**:
 ```bash
@@ -346,16 +346,16 @@ python test_multi_monitor.py
 **Objetivo**: Validar pipeline completo end-to-end
 
 **Testes**:
-- ✅ Pipeline completo por banco:
+- Pipeline completo por banco:
   - Criar componentes via Factory
   - Conectar
   - Coletar queries ativas
   - Coletar expensive queries
   - Coletar table scans
   - Desconectar
-- ✅ Persistência de cache
-- ✅ Sanitização de queries
-- ✅ Performance checker
+- Persistência de cache
+- Sanitização de queries
+- Performance checker
 
 **Execução**:
 ```bash
@@ -364,19 +364,19 @@ python test_integration.py
 
 **Saída esperada**:
 ```
-🚀 Iniciando testes de integração...
+Iniciando testes de integração...
 
 FASE 1: TESTES DE PIPELINE POR BANCO
-✓ PASSOU: SQL Server Pipeline
-✓ PASSOU: PostgreSQL Pipeline
+PASSOU: SQL Server Pipeline
+PASSOU: PostgreSQL Pipeline
 
 FASE 2: TESTES DE UTILIDADES
-✓ PASSOU: Persistência de Cache
-✓ PASSOU: Sanitização de Queries
-✓ PASSOU: Performance Checker
+PASSOU: Persistência de Cache
+PASSOU: Sanitização de Queries
+PASSOU: Performance Checker
 
 Total: 5/5 testes passaram
-🎉 TODOS OS TESTES DE INTEGRAÇÃO PASSARAM!
+TODOS OS TESTES DE INTEGRAÇÃO PASSARAM!
 ```
 
 ---
@@ -386,27 +386,27 @@ Total: 5/5 testes passaram
 **Objetivo**: Validar utilities (cache, sanitizer, etc.)
 
 **Testes**:
-- ✅ QueryCache
+- QueryCache
   - Add/get
   - Cache miss
   - Save/load
   - Limpeza de cache antigo
-- ✅ QuerySanitizer
+- QuerySanitizer
   - Valores literais numéricos
   - Valores literais string
   - Múltiplos espaços
   - Case insensitive
-- ✅ PerformanceChecker
+- PerformanceChecker
   - Alto CPU
   - Alto elapsed time
   - Alto logical reads
   - Query normal
-- ✅ CredentialsResolver
+- CredentialsResolver
   - Variáveis de ambiente
   - Valores literais
   - Variável não definida (erro)
-- ✅ StructuredLogger
-- ✅ SQLFormatter
+- StructuredLogger
+- SQLFormatter
 
 **Execução**:
 ```bash
@@ -415,7 +415,7 @@ python test_utils.py
 
 ---
 
-## 🔍 Troubleshooting
+## Troubleshooting
 
 ### Erro: "Nenhum database configurado"
 
@@ -510,44 +510,44 @@ pip install hdbcli
 
 ---
 
-## 📊 Cobertura de Testes
+## Cobertura de Testes
 
 ### Componentes Testados
 
 | Componente | Cobertura | Status |
 |------------|-----------|--------|
-| DatabaseFactory | 100% | ✅ |
-| SQLServerConnection | 90% | ✅ |
-| PostgreSQLConnection | 90% | ✅ |
-| HANAConnection | 90% | ✅ |
-| SQLServerCollector | 85% | ✅ |
-| PostgreSQLCollector | 85% | ✅ |
-| HANACollector | 85% | ✅ |
-| SQLServerExtractor | 80% | ✅ |
-| PostgreSQLExtractor | 80% | ✅ |
-| HANAExtractor | 80% | ✅ |
-| MultiDatabaseMonitor | 75% | ✅ |
-| QueryCache | 95% | ✅ |
-| QuerySanitizer | 90% | ✅ |
-| PerformanceChecker | 90% | ✅ |
-| CredentialsResolver | 95% | ✅ |
-| StructuredLogger | 85% | ✅ |
+| DatabaseFactory | 100% | |
+| SQLServerConnection | 90% | |
+| PostgreSQLConnection | 90% | |
+| HANAConnection | 90% | |
+| SQLServerCollector | 85% | |
+| PostgreSQLCollector | 85% | |
+| HANACollector | 85% | |
+| SQLServerExtractor | 80% | |
+| PostgreSQLExtractor | 80% | |
+| HANAExtractor | 80% | |
+| MultiDatabaseMonitor | 75% | |
+| QueryCache | 95% | |
+| QuerySanitizer | 90% | |
+| PerformanceChecker | 90% | |
+| CredentialsResolver | 95% | |
+| StructuredLogger | 85% | |
 
 ### Cobertura por Fase (TASKS.md)
 
 | Fase | Descrição | Testes | Status |
 |------|-----------|--------|--------|
-| FASE 1 | Estrutura e ABCs | Manual | ✅ |
-| FASE 2 | SQL Server | test_sqlserver.py | ✅ |
-| FASE 3 | PostgreSQL | test_postgresql.py | ✅ |
-| FASE 4 | SAP HANA | test_hana.py | ✅ |
-| FASE 5 | Factory e Orquestração | test_factory.py, test_multi_monitor.py | ✅ |
-| FASE 6 | Configuração | test_integration.py | ✅ |
-| FASE 7 | Testes e Validação | **COMPLETA** | ✅ |
+| FASE 1 | Estrutura e ABCs | Manual | |
+| FASE 2 | SQL Server | test_sqlserver.py | |
+| FASE 3 | PostgreSQL | test_postgresql.py | |
+| FASE 4 | SAP HANA | test_hana.py | |
+| FASE 5 | Factory e Orquestração | test_factory.py, test_multi_monitor.py | |
+| FASE 6 | Configuração | test_integration.py | |
+| FASE 7 | Testes e Validação | **COMPLETA** | |
 
 ---
 
-## 🎯 Próximos Passos
+## Próximos Passos
 
 ### Melhorias Futuras
 
@@ -572,7 +572,7 @@ pip install hdbcli
 
 ---
 
-## 📚 Recursos Adicionais
+## Recursos Adicionais
 
 - **TASKS.md**: Progresso das fases do projeto
 - **SECURITY.md**: Guia de segurança
@@ -581,7 +581,7 @@ pip install hdbcli
 
 ---
 
-## 📞 Suporte
+## Suporte
 
 Em caso de problemas com os testes:
 
@@ -594,4 +594,4 @@ Em caso de problemas com os testes:
 
 **Última atualização**: 2026-01-07
 **Versão**: 1.0
-**Status**: ✅ Suite completa de testes implementada
+**Status**: Suite completa de testes implementada

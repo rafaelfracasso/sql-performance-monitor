@@ -2,11 +2,11 @@
 
 **Data**: 2025-12-29
 **Versão**: 1.0
-**Status**: ✅ Implementado
+**Status**: Implementado
 
 ---
 
-## 📋 Índice
+## Índice
 
 1. [Visão Geral](#visão-geral)
 2. [Arquitetura](#arquitetura)
@@ -21,33 +21,33 @@
 
 ---
 
-## 📊 Visão Geral
+## Visão Geral
 
 ### O Problema
 
 O sistema anterior usava:
-- ✗ Logs TXT dispersos e difíceis de analisar
-- ✗ Cache JSON sem análise temporal
-- ✗ Sem histórico de métricas
-- ✗ Impossível identificar tendências
-- ✗ Nenhuma capacidade analítica
+- Logs TXT dispersos e difíceis de analisar
+- Cache JSON sem análise temporal
+- Sem histórico de métricas
+- Impossível identificar tendências
+- Nenhuma capacidade analítica
 
 ### A Solução
 
 Implementamos um **sistema completo de observabilidade** usando **DuckDB**:
 
-✅ **Banco de dados analítico embarcado** (OLAP otimizado)
-✅ **Histórico completo** de queries e métricas
-✅ **Análises temporais** e identificação de tendências
-✅ **Queries analíticas rápidas** (sub-segundo)
-✅ **API de alto nível** para dashboards
-✅ **Export para ferramentas** (Grafana, Power BI, Tableau)
-✅ **ROI de otimizações** (economia de tokens LLM)
-✅ **Thread-safe** e performático
+**Banco de dados analítico embarcado** (OLAP otimizado)
+**Histórico completo** de queries e métricas
+**Análises temporais** e identificação de tendências
+**Queries analíticas rápidas** (sub-segundo)
+**API de alto nível** para dashboards
+**Export para ferramentas** (Grafana, Power BI, Tableau)
+**ROI de otimizações** (economia de tokens LLM)
+**Thread-safe** e performático
 
 ---
 
-## 🏗️ Arquitetura
+## Arquitetura
 
 ### Componentes Principais
 
@@ -112,7 +112,7 @@ Implementamos um **sistema completo de observabilidade** usando **DuckDB**:
 
 ---
 
-## 🚀 Instalação e Configuração
+## Instalação e Configuração
 
 ### 1. Instalar Dependências
 
@@ -152,7 +152,7 @@ python examples_analytics.py
 
 ---
 
-## 🗄️ Schema do Banco de Dados
+## Schema do Banco de Dados
 
 ### 1. `queries_collected` - Histórico de Queries
 
@@ -361,7 +361,7 @@ CREATE TABLE table_metadata (
 
 ---
 
-## 🔧 API de Analytics
+## API de Analytics
 
 ### QueryAnalytics - API de Alto Nível
 
@@ -546,7 +546,7 @@ health = analytics.get_monitoring_health(hours=24)
 
 ---
 
-## 💡 Exemplos de Uso
+## Exemplos de Uso
 
 ### Exemplo 1: Dashboard Simples em Terminal
 
@@ -601,19 +601,19 @@ while True:
     health = analytics.get_monitoring_health(hours=1)
 
     if health['success_rate_percent'] < 95:
-        print(f"⚠️  ALERTA: Taxa de sucesso baixa: {health['success_rate_percent']}%")
+        print(f"ALERTA: Taxa de sucesso baixa: {health['success_rate_percent']}%")
 
     if health['instances_with_errors']:
         for err in health['instances_with_errors']:
             if err['error_rate_percent'] > 10:
-                print(f"🚨 {err['instance']}: {err['error_rate_percent']}% de erro!")
+                print(f"{err['instance']}: {err['error_rate_percent']}% de erro!")
 
     time.sleep(300)  # Checar a cada 5 minutos
 ```
 
 ---
 
-## 🔍 Queries Customizadas
+## Queries Customizadas
 
 Você pode executar SQL diretamente no DuckDB para análises específicas.
 
@@ -670,7 +670,7 @@ results = conn.execute("""
 
 ---
 
-## 🔗 Export e Integração
+## Export e Integração
 
 ### 1. Export para Parquet
 
@@ -726,7 +726,7 @@ print(correlation)
 
 ---
 
-## ⚡ Performance e Otimização
+## Performance e Otimização
 
 ### Índices Criados
 
@@ -769,7 +769,7 @@ store.vacuum_database()
 
 ---
 
-## 🤔 FAQ
+## FAQ
 
 ### Q: O MetricsStore substitui os logs TXT?
 
@@ -817,7 +817,7 @@ result = conn.execute("SELECT * FROM queries_collected LIMIT 10").fetchall()
 
 ---
 
-## 📚 Referências
+## Referências
 
 - **DuckDB**: https://duckdb.org/
 - **SQL Monitor**: [README.md](README.md)
@@ -826,7 +826,7 @@ result = conn.execute("SELECT * FROM queries_collected LIMIT 10").fetchall()
 
 ---
 
-## ✅ Checklist de Implementação
+## Checklist de Implementação
 
 - [x] Schema DuckDB com 6 tabelas
 - [x] MetricsStore com 20+ métodos
@@ -842,6 +842,6 @@ result = conn.execute("SELECT * FROM queries_collected LIMIT 10").fetchall()
 
 ---
 
-**Pronto para usar!** 🎉
+**Pronto para usar!**
 
 Execute `python examples_analytics.py` para ver o sistema em ação.

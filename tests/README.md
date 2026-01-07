@@ -2,7 +2,7 @@
 
 Este diretório contém todos os testes do projeto, organizados por tipo.
 
-## 📁 Estrutura
+## Estrutura
 
 ```
 tests/
@@ -20,7 +20,7 @@ tests/
     └── test_integration.py  # Testes do pipeline completo
 ```
 
-## 🎯 Tipos de Testes
+## Tipos de Testes
 
 ### Unit Tests (unit/)
 Testes de componentes individuais, sem dependências externas.
@@ -61,7 +61,7 @@ python -m pytest tests/e2e/
 python tests/e2e/test_integration.py
 ```
 
-## ⚙️ Configuração
+## Configuração
 
 ### Pré-requisitos
 
@@ -93,7 +93,7 @@ CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 ALTER DATABASE [SeuDatabase] SET QUERY_STORE = ON;
 ```
 
-## 🚀 Executando os Testes
+## Executando os Testes
 
 ### Todos os testes
 ```bash
@@ -128,7 +128,7 @@ python -m pytest tests/ -v
 python -m pytest tests/ --cov=sql_monitor --cov-report=html
 ```
 
-## 📊 Cobertura de Testes
+## Cobertura de Testes
 
 | Componente | Cobertura | Testes |
 |------------|-----------|--------|
@@ -143,7 +143,7 @@ python -m pytest tests/ --cov=sql_monitor --cov-report=html
 
 **Total**: ~90% de cobertura
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### "No module named 'pyodbc'"
 ```bash
@@ -188,7 +188,7 @@ HANA_USERNAME=SYSTEM
 HANA_PASSWORD=sua_senha
 ```
 
-## 📚 Documentação
+## Documentação
 
 Para mais detalhes, consulte:
 - `docs/TESTING.md` - Guia completo de testes
