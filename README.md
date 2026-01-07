@@ -18,6 +18,77 @@ Sistema completo de monitoramento e otimização de performance que:
 - **PostgreSQL** - Suporte completo (9.6+)
 - **SAP HANA** - Em desenvolvimento
 
+## Estrutura do Projeto
+
+```
+sql-performance-monitor/
+├── README.md                 # Este arquivo
+├── main.py                   # Ponto de entrada principal
+├── requirements.txt          # Dependências Python
+├── config.json               # Configurações gerais
+├── .env                      # Variáveis de ambiente (não versionado)
+├── .gitignore               # Arquivos ignorados pelo Git
+│
+├── config/                   # Configurações
+│   ├── databases.json        # Configuração de bancos de dados
+│   └── databases.json.example # Template de configuração
+│
+├── docs/                     # Documentação completa
+│   ├── README.md             # Índice da documentação
+│   ├── INSTALL.md            # Guia de instalação
+│   ├── CONFIGURATION.md      # Guia de configuração
+│   ├── SECURITY.md           # Segurança e credenciais
+│   ├── PERMISSIONS.md        # Permissões de banco
+│   ├── TESTING.md            # Guia de testes
+│   ├── LOGGING.md            # Sistema de logging
+│   ├── OBSERVABILITY.md      # Métricas e monitoramento
+│   ├── WEEKLY_OPTIMIZER.md   # Otimizador semanal
+│   ├── CHANGELOG.md          # Histórico de mudanças
+│   ├── TASKS.md              # Tarefas e progresso
+│   └── TEST_RESULTS.md       # Resultados de testes
+│
+├── scripts/                  # Scripts auxiliares
+│   ├── README.md             # Documentação dos scripts
+│   └── validate_config.py    # Validador de configuração
+│
+├── sql_monitor/              # Código-fonte principal
+│   ├── __init__.py
+│   ├── core/                 # Componentes core
+│   ├── connections/          # Conectores de banco
+│   ├── collectors/           # Coletores de métricas
+│   ├── extractors/           # Extratores de metadados
+│   ├── factories/            # Factories para criação de componentes
+│   ├── monitor/              # Orquestradores de monitoramento
+│   ├── optimization/         # Sistema de otimização automática
+│   ├── api/                  # API REST e dashboard web
+│   ├── config/               # Modelos de configuração
+│   └── utils/                # Utilitários (cache, logger, etc)
+│
+├── tests/                    # Testes
+│   ├── README.md             # Documentação dos testes
+│   ├── __init__.py
+│   ├── unit/                 # Testes unitários
+│   │   ├── test_factory.py
+│   │   └── test_utils.py
+│   ├── integration/          # Testes de integração
+│   │   ├── test_sqlserver.py
+│   │   ├── test_postgresql.py
+│   │   ├── test_hana.py
+│   │   └── test_multi_monitor.py
+│   └── e2e/                  # Testes end-to-end
+│       └── test_integration.py
+│
+└── logs/                     # Logs e dados (não versionado)
+    ├── *.log                 # Arquivos de log
+    ├── *.json                # Caches JSON
+    └── *.duckdb              # Banco de métricas
+```
+
+**Links Rápidos**:
+- 📖 [Documentação Completa](docs/README.md)
+- 🧪 [Testes](tests/README.md)
+- 🔧 [Scripts](scripts/README.md)
+
 ## Principais Funcionalidades
 
 ### 1. Monitoramento Multi-Database
@@ -96,7 +167,7 @@ Sistema automatizado de otimização semanal que:
 - Auditoria completa no DuckDB
 - Dry-run mode para testes
 
-Ver documentação completa em: [WEEKLY_OPTIMIZER.md](WEEKLY_OPTIMIZER.md)
+Ver documentação completa em: [WEEKLY_OPTIMIZER.md](docs/WEEKLY_OPTIMIZER.md)
 
 ### 6. Integração Microsoft Teams
 - Notificações de queries problemáticas
