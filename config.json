@@ -1,0 +1,7 @@
+{
+  "metrics_store": {
+    "db_path": "logs/metrics.duckdb",
+    "enable_compression": true,
+    "retention_days": 30
+  }
+}

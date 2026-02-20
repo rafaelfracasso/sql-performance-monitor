@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Instancias Monitoradas</h2>
+    <p class="subtitle">Status e saude das instancias monitoradas</p>
+</div>
+
+<!-- Overview Cards -->
+{% set online_count = health.active_instances|selectattr('status', 'equalto', 'online')|list|length %}
+{% set offline_count = health.active_instances|selectattr('status', 'equalto', 'offline')|list|length %}
+{% set disabled_count = health.active_instances|selectattr('status', 'equalto', 'disabled')|list|length %}
+
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--success-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ health.active_instances|length }}</div>
+                <div class="metric-label">Instancias</div>
+                <div class="metric-sublabel">
+                    <span class="text-success">{{ online_count }} online</span>
+                    {% if offline_count > 0 %}<span class="text-error"> / {{ offline_count }} offline</span>{% endif %}
+                    {% if disabled_count > 0 %}<span class="text-secondary"> / {{ disabled_count }} desab.</span>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--primary-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ health.total_cycles }}</div>
+                <div class="metric-label">Ciclos Executados</div>
+                <div class="metric-sublabel">{{ health.successful_cycles }} com sucesso, {{ health.failed_cycles }} falhas</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card {% if health.success_rate_percent >= 95 %}metric-success{% elif health.success_rate_percent >= 80 %}metric-warning{% else %}metric-error{% endif %}">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:{% if health.success_rate_percent >= 95 %}var(--success-color){% elif health.success_rate_percent >= 80 %}var(--warning-color){% else %}var(--error-color){% endif %}; flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ "%.1f"|format(health.success_rate_percent) }}%</div>
+                <div class="metric-label">Taxa de Sucesso</div>
+                <div class="metric-sublabel">{{ health.successful_cycles }}/{{ health.total_cycles }} ciclos</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card {% if health.error_rate_percent > 10 %}metric-error{% elif health.error_rate_percent > 5 %}metric-warning{% else %}metric-success{% endif %}">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:{% if health.error_rate_percent > 10 %}var(--error-color){% elif health.error_rate_percent > 5 %}var(--warning-color){% else %}var(--success-color){% endif %}; flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ "%.1f"|format(health.error_rate_percent) }}%</div>
+                <div class="metric-label">Taxa de Erro</div>
+                <div class="metric-sublabel">{{ health.failed_cycles }} falhas</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Instancias Grid -->
+<div class="section">
+    <div class="section-header">
+        <h3>Detalhes das Instancias</h3>
+        <span class="badge">{{ health.active_instances|length }} instancias</span>
+    </div>
+
+    <div class="instances-grid">
+        {% for instance in health.active_instances %}
+        <div class="instance-card instance-card--{{ instance.status|default('online') }}">
+            <div class="instance-header">
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <div class="instance-status-dot instance-status-dot--{{ instance.status|default('online') }}"></div>
+                    <span class="instance-name">{{ instance.name }}</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                    <span class="badge badge-{{ instance.type|lower }}">{{ instance.type|upper }}</span>
+                    {% if instance.status == 'disabled' %}
+                    <span class="status-indicator" style="background-color:var(--border-color); color:var(--text-secondary);">Desabilitado</span>
+                    {% elif instance.status == 'offline' %}
+                    <span class="status-indicator status-offline">Offline</span>
+                    {% else %}
+                    <span class="status-indicator status-online">Online</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="instance-body">
+                <div class="instance-stats-grid">
+                    <div class="instance-stat-box">
+                        <div class="instance-stat-icon" style="color:var(--primary-color);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        </div>
+                        <div class="instance-stat-data">
+                            <span class="instance-stat-number">{{ instance.queries_found or 0 }}</span>
+                            <span class="instance-stat-label">Queries</span>
+                        </div>
+                    </div>
+                    <div class="instance-stat-box">
+                        <div class="instance-stat-icon" style="color:var(--success-color);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </div>
+                        <div class="instance-stat-data">
+                            <span class="instance-stat-number">{{ instance.cache_hits or 0 }}</span>
+                            <span class="instance-stat-label">Cache Hits</span>
+                        </div>
+                    </div>
+                    <div class="instance-stat-box">
+                        <div class="instance-stat-icon" style="color:var(--error-color);">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        </div>
+                        <div class="instance-stat-data">
+                            <span class="instance-stat-number {% if instance.errors > 0 %}text-error{% endif %}">{{ instance.errors or 0 }}</span>
+                            <span class="instance-stat-label">Erros</span>
+                        </div>
+                    </div>
+                </div>
+
+                {% if instance.alerts and (instance.alerts.critical > 0 or instance.alerts.high > 0 or instance.alerts.medium > 0 or instance.alerts.low > 0) %}
+                <div class="instance-alerts">
+                    <span class="stat-label">Alertas (24h)</span>
+                    <div class="alerts-badges">
+                        {% if instance.alerts.critical > 0 %}
+                        <span class="alert-count alert-critical">{{ instance.alerts.critical }} Critical</span>
+                        {% endif %}
+                        {% if instance.alerts.high > 0 %}
+                        <span class="alert-count alert-high">{{ instance.alerts.high }} High</span>
+                        {% endif %}
+                        {% if instance.alerts.medium > 0 %}
+                        <span class="alert-count alert-medium">{{ instance.alerts.medium }} Medium</span>
+                        {% endif %}
+                        {% if instance.alerts.low > 0 %}
+                        <span class="alert-count alert-low">{{ instance.alerts.low }} Low</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="instance-health">
+                    {% set score = instance.health_score|default(100) %}
+                    <div class="health-bar-container">
+                        <div class="health-bar-label">Health</div>
+                        <div class="health-bar-wrapper">
+                            <div class="health-bar {% if score < 50 %}health-bar--critical{% elif score < 80 %}health-bar--warning{% endif %}" style="width: {{ score }}%"></div>
+                        </div>
+                        <div class="health-bar-value {% if score < 50 %}text-error{% elif score < 80 %}text-warning{% endif %}">{{ "%.0f"|format(score) }}%</div>
+                    </div>
+                </div>
+
+                {% if instance.last_cycle %}
+                <div class="instance-footer">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; opacity:0.6;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Ultimo ciclo: {{ instance.last_cycle.strftime('%d/%m/%Y %H:%M:%S') }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Historico de Ciclos -->
+<div class="section">
+    <div class="section-header">
+        <h3>Historico de Ciclos (7 dias)</h3>
+    </div>
+    <div class="chart-container-large">
+        <canvas id="cyclesHistoryChart"></canvas>
+    </div>
+</div>
+
+<!-- Estatisticas Gerais -->
+<div class="section">
+    <div class="section-header">
+        <h3>Estatisticas Gerais (24h)</h3>
+    </div>
+    <div class="stats-summary-grid">
+        <div class="stats-summary-item">
+            <div class="stats-summary-icon" style="color:var(--primary-color);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div class="stats-summary-data">
+                <div class="stats-summary-value">{{ health.total_cycles }}</div>
+                <div class="stats-summary-label">Total de Ciclos</div>
+            </div>
+        </div>
+        <div class="stats-summary-item">
+            <div class="stats-summary-icon" style="color:var(--success-color);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div class="stats-summary-data">
+                <div class="stats-summary-value">{{ health.successful_cycles }}</div>
+                <div class="stats-summary-label">Ciclos com Sucesso</div>
+            </div>
+        </div>
+        <div class="stats-summary-item">
+            <div class="stats-summary-icon" style="color:var(--error-color);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </div>
+            <div class="stats-summary-data">
+                <div class="stats-summary-value">{{ health.failed_cycles }}</div>
+                <div class="stats-summary-label">Ciclos com Falha</div>
+            </div>
+        </div>
+        <div class="stats-summary-item">
+            <div class="stats-summary-icon" style="color:#8b5cf6;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z"/></svg>
+            </div>
+            <div class="stats-summary-data">
+                <div class="stats-summary-value">{{ health.total_analyses or 0 }}</div>
+                <div class="stats-summary-label">Analises LLM</div>
+            </div>
+        </div>
+        <div class="stats-summary-item">
+            <div class="stats-summary-icon" style="color:var(--warning-color);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            </div>
+            <div class="stats-summary-data">
+                <div class="stats-summary-value">{{ health.total_cache_hits or 0 }}</div>
+                <div class="stats-summary-label">Cache Hits</div>
+            </div>
+        </div>
+        <div class="stats-summary-item">
+            <div class="stats-summary-icon" style="color:var(--secondary-color);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+            </div>
+            <div class="stats-summary-data">
+                <div class="stats-summary-value">{{ "{:,}".format(health.total_tokens|default(0)).replace(",", ".") }}</div>
+                <div class="stats-summary-label">Tokens LLM</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+SQLMonitor.Dashboard.loadCyclesHistory(7);
+</script>
+{% endblock %}

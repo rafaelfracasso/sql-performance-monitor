@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-flex">
+        <div>
+            <h2>Detalhes do Alerta</h2>
+            <p class="subtitle">{{ alert.instance_name }} - {{ alert.alert_type|replace('_', ' ')|title }}</p>
+        </div>
+        <button onclick="history.back()" class="btn btn-secondary">Voltar</button>
+    </div>
+</div>
+
+<div class="metrics-grid">
+    <div class="metric-card metric-error">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--error-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ alert.severity|upper }}</div>
+                <div class="metric-label">Severidade</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--primary-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ alert.threshold_value|format_number }}</div>
+                <div class="metric-label">Threshold</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card metric-warning">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--warning-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ alert.actual_value|format_number }}</div>
+                <div class="metric-label">Valor Real</div>
+                <div class="metric-sublabel">{{ "%.1f"|format((alert.actual_value / alert.threshold_value * 100) if alert.threshold_value else 0) }}% do threshold</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--primary-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ alert.alert_time.strftime('%H:%M') }}</div>
+                <div class="metric-label">Hora do Alerta</div>
+                <div class="metric-sublabel">{{ alert.alert_time.strftime('%d/%m/%Y') }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-header">
+        <h3>Informações do Alerta</h3>
+        <span class="badge badge-{{ alert.severity }}">{{ alert.alert_type|replace('_', ' ')|title }}</span>
+    </div>
+
+    <div class="info-box">
+        <div class="grid-info">
+            <div>
+                <strong>Instancia:</strong> {{ alert.instance_name }}
+            </div>
+            <div>
+                <strong>Database:</strong> {{ alert.database_name or 'N/A' }}
+            </div>
+            <div>
+                <strong>Tabela:</strong> {{ alert.table_name or 'N/A' }}
+            </div>
+            <div>
+                <strong>Tipo de Alerta:</strong> {{ alert.alert_type|replace('_', ' ')|title }}
+            </div>
+            <div>
+                <strong>Query Hash:</strong> {{ alert.query_hash[:16] }}...
+            </div>
+            <div>
+                <strong>Notificacao Teams:</strong> {{ 'Sim' if alert.teams_notified else 'Nao' }}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if blocking_info %}
+<div class="section">
+    <div class="section-header">
+        <h3>Query Bloqueadora</h3>
+        <span class="severity-badge severity-critical">BLOCKING</span>
+    </div>
+
+    <div class="info-box blocking-info">
+        <div class="blocking-header">
+            <span class="blocking-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+            </span>
+            <div>
+                <strong>Sessao {{ blocking_info.blocking_session_id }}</strong> esta bloqueando esta query
+                <div class="blocking-meta">
+                    Tempo de espera: {{ "%.1f"|format(blocking_info.wait_time_seconds|default(0)) }}s
+                </div>
+            </div>
+        </div>
+
+        <div class="blocking-details">
+            <div class="blocking-detail-grid">
+                <div>
+                    <strong>Host:</strong> {{ blocking_info.blocking_host or 'N/A' }}
+                </div>
+                <div>
+                    <strong>Usuario:</strong> {{ blocking_info.blocking_login or 'N/A' }}
+                </div>
+                <div>
+                    <strong>Aplicacao:</strong> {{ blocking_info.blocking_program or 'N/A' }}
+                </div>
+            </div>
+        </div>
+
+        {% if blocking_info.blocking_query %}
+        <div class="blocking-query">
+            <strong>Query que esta causando o bloqueio:</strong>
+            <pre class="code-preview blocking-code"><code>{{ blocking_info.blocking_query|format_sql }}</code></pre>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% if query_info %}
+<div class="section">
+    <div class="section-header">
+        <h3>Query Completa</h3>
+        <a href="/dashboard/queries/{{ alert.query_hash }}" class="btn btn-primary btn-sm">Ver Detalhes da Query</a>
+    </div>
+
+    <div class="info-box">
+        <div class="grid-info">
+            <div>
+                <strong>Schema:</strong> {{ query_info.schema_name or 'N/A' }}
+            </div>
+            <div>
+                <strong>Tipo:</strong> {{ query_info.query_type or 'N/A' }}
+            </div>
+            <div>
+                <strong>Primeira Coleta:</strong> {{ query_info.collected_at.strftime('%d/%m/%Y %H:%M:%S') if query_info.collected_at else 'N/A' }}
+            </div>
+            <div>
+                <strong>Total Ocorrencias:</strong> {{ query_info.occurrence_count or 1 }}
+            </div>
+        </div>
+    
+
+    <div class="header-flex mb-2">
+        <h4>Query SQL</h4>
+        <button class="btn-view-query" onclick="openQueryModal('{{ alert.query_hash }}')">Ver Query Completa</button>
+    </div>
+    <pre class="code-preview"><code>{{ (query_info.query_preview or 'N/A')|format_sql }}</code></pre>
+    </div>
+</div>
+{% endif %}
+
+{% if llm_analysis %}
+<div class="section">
+    <div class="section-header">
+        <h3>Análise LLM</h3>
+        <span class="severity-badge severity-{{ llm_analysis.severity }}">{{ llm_analysis.severity|upper }}</span>
+    </div>
+
+    <div class="info-box">
+        <div class="grid-info mb-2">
+            <span class="text-secondary text-sm">Analisado em: {{ llm_analysis.analyzed_at.strftime('%d/%m/%Y %H:%M:%S') }}</span>
+            <span class="text-secondary text-sm">Duracao: {{ llm_analysis.analysis_duration_ms|default(0)|format_number }}ms</span>
+            {% if llm_analysis.tokens_used %}
+            <span class="text-secondary text-sm">Tokens: {{ llm_analysis.tokens_used|format_number }}</span>
+            {% endif %}
+        </div>
+
+        <h4>Explicacao do Problema</h4>
+        <div class="llm-explanation markdown-content">{{ llm_analysis.analysis_text }}</div>
+
+        {% if llm_analysis.recommendations %}
+        <h4>Recomendacoes</h4>
+        <div class="llm-recommendation markdown-content">{{ llm_analysis.recommendations }}</div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% if metrics %}
+<div class="section">
+    <div class="section-header">
+        <h3>Métricas da Query</h3>
+        <span class="badge">Estatísticas agregadas</span>
+    </div>
+
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div style="display:flex; align-items:flex-start; gap:1rem;">
+                <div style="color:var(--error-color); flex-shrink:0; margin-top:0.25rem;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+                </div>
+                <div>
+                    <div class="metric-value">{{ metrics.avg_cpu_time_ms|default(0)|format_number }}ms</div>
+                    <div class="metric-label">CPU Medio</div>
+                    <div class="metric-sublabel">Min: {{ metrics.min_cpu_time_ms|default(0)|format_number }}ms | Max: {{ metrics.max_cpu_time_ms|default(0)|format_number }}ms</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div style="display:flex; align-items:flex-start; gap:1rem;">
+                <div style="color:var(--warning-color); flex-shrink:0; margin-top:0.25rem;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div>
+                    <div class="metric-value">{{ metrics.avg_duration_ms|default(0)|format_number }}ms</div>
+                    <div class="metric-label">Duration Medio</div>
+                    <div class="metric-sublabel">Min: {{ metrics.min_duration_ms|default(0)|format_number }}ms | Max: {{ metrics.max_duration_ms|default(0)|format_number }}ms</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div style="display:flex; align-items:flex-start; gap:1rem;">
+                <div style="color:var(--success-color); flex-shrink:0; margin-top:0.25rem;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                </div>
+                <div>
+                    <div class="metric-value">{{ metrics.avg_logical_reads|default(0)|format_number }}</div>
+                    <div class="metric-label">Logical Reads Medio</div>
+                    <div class="metric-sublabel">Max: {{ metrics.max_logical_reads|default(0)|format_number }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div style="display:flex; align-items:flex-start; gap:1rem;">
+                <div style="color:var(--primary-color); flex-shrink:0; margin-top:0.25rem;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                </div>
+                <div>
+                    <div class="metric-value">{{ metrics.execution_count|default(0)|format_number }}</div>
+                    <div class="metric-label">Total Execucoes</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if related_alerts %}
+<div class="section">
+    <div class="section-header">
+        <h3>Alertas Relacionados</h3>
+        <span class="badge">{{ related_alerts|length }} alertas</span>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Severidade</th>
+                    <th>Threshold</th>
+                    <th>Valor Real</th>
+                    <th>Data/Hora</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rel_alert in related_alerts %}
+                <tr>
+                    <td>{{ rel_alert.alert_type|replace('_', ' ')|title }}</td>
+                    <td>
+                        <span class="severity-badge severity-{{ rel_alert.severity }}">{{ rel_alert.severity|upper }}</span>
+                    </td>
+                    <td class="number">{{ rel_alert.threshold_value|format_number }}</td>
+                    <td class="number">{{ rel_alert.actual_value|format_number }}</td>
+                    <td>{{ rel_alert.alert_time.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

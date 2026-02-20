@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Tendências de Performance</h2>
+    <p class="subtitle">Análise de tendências e evolução ao longo do tempo</p>
+</div>
+
+<!-- Filtros -->
+<div class="filters-panel">
+    <form method="get" class="filters-form">
+        <div class="filters-main">
+            <div class="filter-chips">
+                <label for="period">Período:</label>
+                <select name="period" id="period" onchange="this.form.submit()" class="chip-select">
+                    <option value="24h" {% if period == '24h' %}selected{% endif %}>24 horas</option>
+                    <option value="7d" {% if period == '7d' %}selected{% endif %}>7 dias</option>
+                    <option value="30d" {% if period == '30d' %}selected{% endif %}>30 dias</option>
+                </select>
+            </div>
+            <div class="filter-chips">
+                <label for="instance">Instância:</label>
+                <select name="instance" id="instance" onchange="this.form.submit()" class="chip-select">
+                    <option value="">Todas</option>
+                    {% for inst in instance_filter %}
+                    <option value="{{ inst }}" {% if instance == inst %}selected{% endif %}>{{ inst }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Performance ao Longo do Tempo -->
+<div class="section">
+    <h3>Performance ao Longo do Tempo</h3>
+    <div class="chart-container">
+        <canvas id="performanceTrendChart"></canvas>
+    </div>
+</div>
+
+<!-- Queries Analisadas vs Cache -->
+<div class="section">
+    <h3>Análises LLM vs Cache</h3>
+    <div class="chart-container">
+        <canvas id="cacheVsAnalysisChart"></canvas>
+    </div>
+</div>
+
+<!-- Alertas ao Longo do Tempo -->
+<div class="section">
+    <h3>Alertas por Dia</h3>
+    <div class="chart-container">
+        <canvas id="alertsTrendChart"></canvas>
+    </div>
+</div>
+
+<!-- Comparação Entre Instâncias -->
+<div class="section">
+    <h3>Comparação de Performance por Instância</h3>
+    <div class="chart-container">
+        <canvas id="instanceComparisonChart"></canvas>
+    </div>
+</div>
+
+<!-- Tabela de Dados -->
+<div class="section">
+    <div class="section-header">
+        <h3>Dados Detalhados</h3>
+        <button onclick="SQLMonitor.Dashboard.exportData('trendsTable', 'performance_trends_{{ days }}d.csv')" class="btn btn-secondary">Exportar CSV</button>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table" id="trendsTable">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Queries Únicas</th>
+                    <th>Total Queries</th>
+                    <th>CPU Médio (ms)</th>
+                    <th>Duration Médio (ms)</th>
+                    <th>CPU Máximo (ms)</th>
+                    <th>Duration Máximo (ms)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for trend in trends %}
+                <tr>
+                    <td>{{ trend.time_bucket }}</td>
+                    <td class="number">{{ trend.unique_queries|format_number }}</td>
+                    <td class="number">{{ trend.total_queries|format_number }}</td>
+                    <td class="number">{{ trend.avg_cpu_ms|format_number }}</td>
+                    <td class="number">{{ trend.avg_duration_ms|format_number }}</td>
+                    <td class="number">{{ trend.max_cpu_ms|format_number }}</td>
+                    <td class="number">{{ trend.max_duration_ms|format_number }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Buscar dados da API
+const days = {{ days }};
+const instance = '{{ instance or "" }}';
+const instanceParam = instance ? `&instance=${encodeURIComponent(instance)}` : '';
+
+SQLMonitor.API.get(`/dashboard/trends?days=${days}&granularity=day${instanceParam}`)
+    .then(data => {
+        // Gráfico de Performance
+        SQLMonitor.ChartFactory.createLine('performanceTrendChart', {
+            data: {
+                labels: data.labels,
+                datasets: [
+                    {
+                        label: 'CPU Médio (ms)',
+                        data: data.datasets[0].data,
+                        borderColor: SQLMonitor.ChartFactory.colors.primary,
+                        backgroundColor: SQLMonitor.ChartFactory.bgColors.primary,
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Duration Média (ms)',
+                        data: data.datasets[1].data,
+                        borderColor: SQLMonitor.ChartFactory.colors.warning,
+                        backgroundColor: SQLMonitor.ChartFactory.bgColors.warning,
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                scales: {
+                    y: {
+                        title: { display: true, text: 'Tempo (ms)' }
+                    }
+                }
+            }
+        });
+
+        // Gráfico de Queries (Cache vs Analysis)
+        SQLMonitor.ChartFactory.createBar('cacheVsAnalysisChart', {
+            data: {
+                labels: data.labels,
+                datasets: [
+                    {
+                        label: 'Queries Únicas',
+                        data: data.datasets[2].data,
+                        backgroundColor: SQLMonitor.ChartFactory.colors.success,
+                        borderColor: SQLMonitor.ChartFactory.colors.success,
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                scales: {
+                    y: {
+                        title: { display: true, text: 'Quantidade' }
+                    }
+                }
+            }
+        });
+    })
+    .catch(error => console.error('Erro ao carregar dados de tendências:', error));
+
+// Buscar dados de alertas
+SQLMonitor.API.get(`/dashboard/alerts?period=${days}d${instance ? '&instance=' + encodeURIComponent(instance) : ''}`)
+    .then(alerts => {
+        // Agrupar alertas por dia
+        const alertsByDay = {};
+        alerts.forEach(alert => {
+            const day = alert.alert_time.split('T')[0];
+            alertsByDay[day] = (alertsByDay[day] || 0) + 1;
+        });
+
+        const labels = Object.keys(alertsByDay).sort();
+        const data = labels.map(label => alertsByDay[label]);
+
+        SQLMonitor.ChartFactory.createLine('alertsTrendChart', {
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Alertas',
+                    data: data,
+                    borderColor: SQLMonitor.ChartFactory.colors.error,
+                    backgroundColor: SQLMonitor.ChartFactory.bgColors.error,
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        ticks: { stepSize: 1 },
+                        title: { display: true, text: 'Quantidade de Alertas' }
+                    }
+                }
+            }
+        });
+    })
+    .catch(error => console.error('Erro ao carregar alertas:', error));
+
+// Buscar dados de instâncias
+SQLMonitor.API.get('/dashboard/instances')
+    .then(health => {
+        const instances = health.active_instances;
+        const labels = instances.map(i => i.name);
+        const queriesData = instances.map(i => i.queries_found || 0);
+        const errorsData = instances.map(i => i.errors || 0);
+
+        SQLMonitor.ChartFactory.createBar('instanceComparisonChart', {
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Queries Encontradas',
+                        data: queriesData,
+                        backgroundColor: SQLMonitor.ChartFactory.colors.primary,
+                        borderColor: SQLMonitor.ChartFactory.colors.primary,
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Erros',
+                        data: errorsData,
+                        backgroundColor: SQLMonitor.ChartFactory.colors.error,
+                        borderColor: SQLMonitor.ChartFactory.colors.error,
+                        borderWidth: 1
+                    }
+                ]
+            }
+        });
+    })
+    .catch(error => console.error('Erro ao carregar dados de instâncias:', error));
+</script>
+{% endblock %}

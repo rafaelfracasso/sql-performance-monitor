@@ -1,0 +1,628 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Dashboard de Monitoramento</h2>
+    <p class="subtitle">Visao geral - {% if period == '1h' %}ultima hora{% elif period == '6h' %}ultimas 6 horas{% elif period == '12h' %}ultimas 12 horas{% elif period == '24h' %}ultimas 24 horas{% elif period == '7d' %}ultimos 7 dias{% else %}ultimos 30 dias{% endif %}{% if instance %} - {{ instance }}{% endif %}</p>
+</div>
+
+<!-- Filtros -->
+<div class="filters-panel compact">
+    <form method="get" action="/" id="homeFiltersForm">
+        <div class="filter-chips">
+            <select name="period" id="period" onchange="this.form.submit()" class="chip-select">
+                <option value="1h" {% if period == '1h' %}selected{% endif %}>1h</option>
+                <option value="6h" {% if period == '6h' %}selected{% endif %}>6h</option>
+                <option value="12h" {% if period == '12h' %}selected{% endif %}>12h</option>
+                <option value="24h" {% if period == '24h' %}selected{% endif %}>24h</option>
+                <option value="7d" {% if period == '7d' %}selected{% endif %}>7 dias</option>
+                <option value="30d" {% if period == '30d' %}selected{% endif %}>30 dias</option>
+            </select>
+
+            <select name="instance" id="instance" onchange="this.form.submit()" class="chip-select {% if instance %}chip-active{% endif %}">
+                <option value="">Todas instâncias</option>
+                {% for inst in instance_filter %}
+                <option value="{{ inst }}" {% if instance == inst %}selected{% endif %}>{{ inst }}</option>
+                {% endfor %}
+            </select>
+
+            {% if instance %}
+            <a href="/?period={{ period }}" class="chip-btn chip-clear" title="Limpar filtro de instância">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- Cards de Metricas Principais -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--primary-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div>
+                <div class="metric-value" id="totalDbTime" data-value="{{ summary.total_db_time_ms }}">
+                    {{ summary.total_db_time_ms|format_number }} ms
+                </div>
+                <div class="metric-label">Carga Total (DB Time)</div>
+                <div class="metric-sublabel">
+                    Latencia Media: {{ "%.1f"|format(summary.avg_latency_ms) }} ms
+                    <div class="text-xs text-secondary">{{ summary.total_occurrences|format_number }} execucoes</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:#8b5cf6; flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ summary.analyses_performed|format_number }}</div>
+                <div class="metric-label">Analises LLM</div>
+                <div class="metric-sublabel">
+                    {{ summary.total_llm_tokens|format_number }} tokens
+                    <div class="mt-4 text-success text-sm">
+                        Est. ${{ "%.4f"|format(summary.total_estimated_cost_usd or 0) }} USD | R$ {{ "%.4f"|format(summary.total_estimated_cost_brl or 0) }} BRL
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--warning-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ summary.alerts.total|format_number }}</div>
+                <div class="metric-label">Alertas</div>
+                <div class="metric-sublabel">
+                    {{ summary.alerts.critical|format_number }} criticos, {{ summary.alerts.high|format_number }} altos
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card {% if health.success_rate_percent >= 95 %}metric-success{% elif health.success_rate_percent >= 80 %}metric-warning{% else %}metric-error{% endif %}">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:{% if health.success_rate_percent >= 95 %}var(--success-color){% elif health.success_rate_percent >= 80 %}var(--warning-color){% else %}var(--error-color){% endif %}; flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ "%.1f"|format(health.success_rate_percent) }}%</div>
+                <div class="metric-label">Taxa de Sucesso</div>
+                <div class="metric-sublabel">{{ health.successful_cycles }}/{{ health.total_cycles }} ciclos</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Seção de Instâncias Monitoradas -->
+<div class="section">
+    <h3>Instâncias Monitoradas ({{ health.active_instances|length }})</h3>
+    <div class="instances-grid">
+        {% for instance in health.active_instances %}
+        <div class="instance-card" style="border-left: 4px solid {% if instance.status == 'online' %}var(--success-color){% elif instance.status == 'disabled' %}var(--secondary-color){% else %}var(--error-color){% endif %};">
+            <div class="instance-header compact">
+                <span class="instance-name">{{ instance.name }}</span>
+                <span class="badge badge-{{ instance.type|lower }}">{{ instance.type|upper }}</span>
+            </div>
+            <div class="instance-stats">
+                <span class="stat-item">
+                    Status: 
+                    {% if instance.status == 'online' %}
+                    <span class="text-success font-bold">Online</span>
+                    {% elif instance.status == 'disabled' %}
+                    <span class="text-secondary font-bold">Desabilitado</span>
+                    {% else %}
+                    <span class="text-error font-bold">Offline</span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Timeline de Capturas -->
+{% if timeline %}
+<div class="section">
+    <div class="section-header">
+        <h3>Timeline de Capturas</h3>
+        <span class="badge">{{ timeline|length }} pontos</span>
+    </div>
+    <div class="timeline-chart-container">
+        <canvas id="timelineChart"></canvas>
+    </div>
+</div>
+{% endif %}
+
+<!-- Graficos de Distribuicao -->
+{% if distribution %}
+<div class="section">
+    <div class="section-header">
+        <h3>Distribuicao de Queries</h3>
+    </div>
+    <div class="charts-grid">
+        <div class="chart-card">
+            <h4>Por Severidade</h4>
+            <div class="chart-wrapper">
+                <canvas id="severityChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-header">
+                <h4>Top 10 Consumidores</h4>
+                <select id="topMetricSelect" class="metric-selector" onchange="updateTopConsumersChart()">
+                    <option value="cpu" selected>CPU (ms)</option>
+                    <option value="duration">Duration (ms)</option>
+                    <option value="reads">Logical Reads</option>
+                    <option value="writes">Writes</option>
+                    <option value="wait">Wait Time (ms)</option>
+                    <option value="memory">Memory (MB)</option>
+                </select>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="topConsumersChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Wait Stats -->
+{% if wait_stats %}
+<div class="section">
+    <div class="section-header">
+        <h3>Wait Stats - Top Waits{% if wait_stats_instance %} ({{ wait_stats_instance }}){% endif %}</h3>
+    </div>
+    <div class="charts-grid">
+        <div class="chart-card" style="flex: 2;">
+            <div class="chart-wrapper">
+                <canvas id="waitStatsChart"></canvas>
+            </div>
+        </div>
+        <div class="chart-card" style="flex: 1;">
+            <h4>Detalhes</h4>
+            <div class="wait-stats-list">
+                {% for ws in wait_stats[:8] %}
+                <div class="wait-stat-item">
+                    <div class="wait-stat-header">
+                        <span class="wait-category-badge wait-cat-{{ ws.wait_category|lower }}">{{ ws.wait_category }}</span>
+                        <span class="wait-stat-value">{{ ws.total_delta_wait_ms|format_number }} ms</span>
+                    </div>
+                    <div class="wait-stat-name" title="{{ ws.wait_type }}">{{ ws.wait_type[:40] }}</div>
+                    <div class="wait-stat-detail">{{ ws.total_delta_tasks|format_number }} tasks | {{ ws.avg_wait_per_task_ms|format_number }} ms/task</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Top 5 Queries Problematicas -->
+<div class="section">
+    <div class="section-header">
+        <h3>Top 5 Queries Mais Lentas (CPU)</h3>
+        <a href="/dashboard/queries" class="btn btn-secondary">Ver Todas</a>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Instancia</th>
+                    <th>Tabela</th>
+                    <th>Query</th>
+                    <th>CPU Medio (ms)</th>
+                    <th>Duration (ms)</th>
+                    <th>Ocorrencias</th>
+                    <th>Severidade</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for query in worst_queries %}
+                <tr class="clickable-row" onclick="window.location.href='/dashboard/queries/{{ query.query_hash }}'">
+                    <td>{{ query.instance_name }}</td>
+                    <td>{{ query.table_name }}</td>
+                    <td class="query-preview">{{ query.query_preview[:80] }}...</td>
+                    <td class="number">{{ query.avg_cpu_time_ms|format_number }}</td>
+                    <td class="number">{{ query.avg_duration_ms|format_number }}</td>
+                    <td class="number">{{ query.occurrences|format_number }}</td>
+                    <td>
+                        <span class="severity-badge severity-{{ query.severity|default('medium') }}">
+                            {{ query.severity|default('medium')|upper }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Alertas Recentes -->
+<div class="section">
+    <div class="section-header">
+        <h3>Alertas Recentes ({{ recent_alerts|length }})</h3>
+        <a href="/dashboard/alerts" class="btn btn-secondary">Ver Todos</a>
+    </div>
+
+    {% if recent_alerts %}
+    <div class="alerts-list">
+        {% for alert in recent_alerts[:10] %}
+        <div class="alert-item alert-{{ alert.severity }} clickable-alert" onclick="window.location.href='/dashboard/alerts/{{ alert.id }}'">
+            <div class="alert-time">{{ alert.alert_time.strftime('%d/%m %H:%M') }}</div>
+            <div class="alert-content">
+                <div class="alert-title">
+                    <strong>{{ alert.instance_name }}</strong> - {{ alert.alert_type|replace('_', ' ')|title }}
+                </div>
+                <div class="alert-details">
+                    {{ alert.database_name }}.{{ alert.table_name }} -
+                    Threshold: {{ alert.threshold_value|format_number }},
+                    Atual: {{ alert.actual_value|format_number }}
+                </div>
+            </div>
+            <div class="alert-severity">
+                <span class="severity-badge severity-{{ alert.severity }}">{{ alert.severity|upper }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-message">Nenhum alerta nas últimas 24 horas.</p>
+    {% endif %}
+</div>
+
+<!-- Cache Efficiency -->
+<div class="section">
+    <h3>Eficiência do Cache</h3>
+    <div class="chart-container chart-center">
+        <canvas id="cacheEfficiencyChart"></canvas>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Formatter para duracao
+function formatDuration(ms) {
+    if (!ms) return '0s';
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d ${hours % 24}h`;
+    if (hours > 0) return `${hours}h ${minutes % 60}m`;
+    if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+    return `${seconds}s`;
+}
+
+// Aplicar formatacao
+const dbTimeEl = document.getElementById('totalDbTime');
+if (dbTimeEl) {
+    const val = parseFloat(dbTimeEl.dataset.value || 0);
+    dbTimeEl.textContent = formatDuration(val);
+    dbTimeEl.title = `Total exato: ${SQLMonitor.Utils.formatNumber(val)} ms`;
+}
+
+// Buscar dados de eficiência do cache (período dinâmico)
+const periodHours = { '1h': 1, '6h': 6, '12h': 12, '24h': 24, '7d': 168, '30d': 720 }['{{ period }}'] || 24;
+SQLMonitor.Dashboard.loadCacheEfficiency(periodHours);
+
+// Timeline Chart
+{% if timeline %}
+SQLMonitor.ChartFactory.createLine('timelineChart', {
+    data: {
+        labels: {{ timeline|map(attribute='time')|list|tojson }},
+        datasets: [
+            {
+                label: 'Capturas',
+                data: {{ timeline|map(attribute='captures')|list|tojson }},
+                borderColor: SQLMonitor.ChartFactory.colors.primary,
+                backgroundColor: SQLMonitor.ChartFactory.bgColors.primary,
+                fill: true,
+                tension: 0.3,
+                yAxisID: 'y'
+            },
+            {
+                label: 'Carga Total (DB Time ms)',
+                data: {{ timeline|map(attribute='total_duration_ms')|list|tojson }},
+                borderColor: SQLMonitor.ChartFactory.colors.purple,
+                backgroundColor: 'rgba(147, 51, 234, 0.1)',
+                fill: false,
+                tension: 0.3,
+                yAxisID: 'y1'
+            },
+            {
+                label: 'CPU Medio (ms)',
+                data: {{ timeline|map(attribute='avg_cpu_ms')|list|tojson }},
+                borderColor: SQLMonitor.ChartFactory.colors.error,
+                backgroundColor: SQLMonitor.ChartFactory.bgColors.error,
+                fill: false,
+                tension: 0.3,
+                yAxisID: 'y1'
+            },
+            {
+                label: 'Duration Media (ms)',
+                data: {{ timeline|map(attribute='avg_duration_ms')|list|tojson }},
+                borderColor: SQLMonitor.ChartFactory.colors.warning,
+                backgroundColor: SQLMonitor.ChartFactory.bgColors.warning,
+                fill: false,
+                tension: 0.3,
+                yAxisID: 'y1',
+                hidden: true
+            },
+            {
+                label: 'CPU Maximo (ms)',
+                data: {{ timeline|map(attribute='max_cpu_ms')|list|tojson }},
+                borderColor: 'rgb(220, 38, 38)',
+                backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                fill: false,
+                tension: 0.3,
+                borderDash: [5, 5],
+                yAxisID: 'y1',
+                hidden: true
+            },
+            {
+                label: 'Alertas Critical',
+                data: {{ timeline|map(attribute='critical_alerts')|list|tojson }},
+                borderColor: 'rgb(185, 28, 28)',
+                backgroundColor: 'rgba(185, 28, 28, 0.5)',
+                type: 'bar',
+                yAxisID: 'y',
+                hidden: true
+            },
+            {
+                label: 'Alertas High',
+                data: {{ timeline|map(attribute='high_alerts')|list|tojson }},
+                borderColor: 'rgb(249, 115, 22)',
+                backgroundColor: 'rgba(249, 115, 22, 0.5)',
+                type: 'bar',
+                yAxisID: 'y',
+                hidden: true
+            }
+        ]
+    },
+    options: {
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+            legend: {
+                onClick: function(e, legendItem, legend) {
+                    const index = legendItem.datasetIndex;
+                    const ci = legend.chart;
+                    if (ci.isDatasetVisible(index)) {
+                        ci.hide(index);
+                        legendItem.hidden = true;
+                    } else {
+                        ci.show(index);
+                        legendItem.hidden = false;
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                type: 'linear',
+                display: true,
+                position: 'left',
+                title: { display: true, text: 'Contagem' }
+            },
+            y1: {
+                type: 'linear',
+                display: true,
+                position: 'right',
+                title: { display: true, text: 'Tempo (ms)' },
+                grid: { drawOnChartArea: false }
+            }
+        }
+    }
+});
+{% endif %}
+
+// Severity Distribution Chart
+{% if distribution %}
+const severityData = {{ distribution.by_severity|tojson }};
+const severityColors = {
+    'critical': SQLMonitor.ChartFactory.colors.error,
+    'high': SQLMonitor.ChartFactory.colors.orange,
+    'medium': SQLMonitor.ChartFactory.colors.warning,
+    'low': SQLMonitor.ChartFactory.colors.success,
+    'none': SQLMonitor.ChartFactory.colors.secondary
+};
+
+SQLMonitor.ChartFactory.createDoughnut('severityChart', {
+    data: {
+        labels: severityData.map(d => d.severity.charAt(0).toUpperCase() + d.severity.slice(1)),
+        datasets: [{
+            data: severityData.map(d => d.count),
+            backgroundColor: severityData.map(d => severityColors[d.severity] || SQLMonitor.ChartFactory.colors.secondary),
+            borderWidth: 0
+        }]
+    },
+    options: {
+        plugins: {
+            legend: { position: 'right' }
+        }
+    }
+});
+
+// Dados de todas as metricas para o chart de Top Consumidores
+const topConsumersData = {
+    cpu: {{ distribution.top_cpu_consumers|default([])|tojson }},
+    duration: {{ distribution.top_duration_consumers|default([])|tojson }},
+    reads: {{ distribution.top_reads_consumers|default([])|tojson }},
+    writes: {{ distribution.top_writes_consumers|default([])|tojson }},
+    wait: {{ distribution.top_wait_consumers|default([])|tojson }},
+    memory: {{ distribution.top_memory_consumers|default([])|tojson }}
+};
+
+const metricLabels = {
+    cpu: 'CPU Medio (ms)',
+    duration: 'Duration Media (ms)',
+    reads: 'Leituras Logicas',
+    writes: 'Escritas',
+    wait: 'Wait Time (ms)',
+    memory: 'Memoria (MB)'
+};
+
+const metricColors = {
+    cpu: { bg: 'rgba(239, 68, 68, 0.7)', hover: 'rgba(239, 68, 68, 1)', border: 'rgb(239, 68, 68)' },
+    duration: { bg: 'rgba(251, 146, 60, 0.7)', hover: 'rgba(251, 146, 60, 1)', border: 'rgb(251, 146, 60)' },
+    reads: { bg: 'rgba(34, 197, 94, 0.7)', hover: 'rgba(34, 197, 94, 1)', border: 'rgb(34, 197, 94)' },
+    writes: { bg: 'rgba(99, 102, 241, 0.7)', hover: 'rgba(99, 102, 241, 1)', border: 'rgb(99, 102, 241)' },
+    wait: { bg: 'rgba(168, 85, 247, 0.7)', hover: 'rgba(168, 85, 247, 1)', border: 'rgb(168, 85, 247)' },
+    memory: { bg: 'rgba(236, 72, 153, 0.7)', hover: 'rgba(236, 72, 153, 1)', border: 'rgb(236, 72, 153)' }
+};
+
+let currentTopMetric = 'cpu';
+let currentTopData = topConsumersData.cpu;
+
+// Top Consumers Chart (clicavel, com seletor de metrica)
+const topConsumersChart = SQLMonitor.ChartFactory.createBar('topConsumersChart', {
+    data: {
+        labels: currentTopData.map(d => d.preview.substring(0, 25) + '...'),
+        datasets: [{
+            label: metricLabels[currentTopMetric],
+            data: currentTopData.map(d => d.value),
+            backgroundColor: currentTopData.map(() => metricColors[currentTopMetric].bg),
+            hoverBackgroundColor: currentTopData.map(() => metricColors[currentTopMetric].hover),
+            borderColor: metricColors[currentTopMetric].border,
+            borderWidth: 1
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        onClick: (event, elements) => {
+            if (elements.length > 0) {
+                const index = elements[0].index;
+                const queryHash = currentTopData[index].query_hash;
+                window.location.href = '/dashboard/queries/' + queryHash;
+            }
+        },
+        onHover: (event, elements) => {
+            event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+        },
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    title: (items) => {
+                        const idx = items[0].dataIndex;
+                        return currentTopData[idx].preview.substring(0, 60) + '...';
+                    },
+                    afterLabel: (item) => {
+                        const idx = item.dataIndex;
+                        return `Execucoes: ${currentTopData[idx].occurrences}\nClique para ver detalhes`;
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                grid: { color: 'rgba(75, 85, 99, 0.1)' }
+            },
+            y: {
+                grid: { display: false }
+            }
+        }
+    }
+});
+
+function updateTopConsumersChart() {
+    const metric = document.getElementById('topMetricSelect').value;
+    currentTopMetric = metric;
+    currentTopData = topConsumersData[metric];
+
+    const colors = metricColors[metric];
+
+    topConsumersChart.data.labels = currentTopData.map(d => d.preview.substring(0, 25) + '...');
+    topConsumersChart.data.datasets[0].label = metricLabels[metric];
+    topConsumersChart.data.datasets[0].data = currentTopData.map(d => d.value);
+    topConsumersChart.data.datasets[0].backgroundColor = currentTopData.map(() => colors.bg);
+    topConsumersChart.data.datasets[0].hoverBackgroundColor = currentTopData.map(() => colors.hover);
+    topConsumersChart.data.datasets[0].borderColor = colors.border;
+
+    topConsumersChart.update();
+}
+{% endif %}
+
+{% if wait_stats %}
+// Wait Stats Stacked Bar Chart
+(function() {
+    const waitData = {{ wait_stats | tojson }};
+    if (!waitData || waitData.length === 0) return;
+
+    const categoryColors = {
+        'IO': {bg: 'rgba(59, 130, 246, 0.7)', border: '#3b82f6'},
+        'Lock': {bg: 'rgba(239, 68, 68, 0.7)', border: '#ef4444'},
+        'CPU': {bg: 'rgba(245, 158, 11, 0.7)', border: '#f59e0b'},
+        'Network': {bg: 'rgba(16, 185, 129, 0.7)', border: '#10b981'},
+        'Memory': {bg: 'rgba(139, 92, 246, 0.7)', border: '#8b5cf6'},
+        'Parallelism': {bg: 'rgba(236, 72, 153, 0.7)', border: '#ec4899'},
+        'Latch': {bg: 'rgba(107, 114, 128, 0.7)', border: '#6b7280'},
+        'Other': {bg: 'rgba(156, 163, 175, 0.7)', border: '#9ca3af'}
+    };
+
+    // Agrupar por categoria
+    const byCategory = {};
+    waitData.forEach(w => {
+        const cat = w.wait_category || 'Other';
+        if (!byCategory[cat]) byCategory[cat] = 0;
+        byCategory[cat] += w.total_delta_wait_ms;
+    });
+
+    const categories = Object.keys(byCategory).sort((a, b) => byCategory[b] - byCategory[a]);
+    const values = categories.map(c => Math.round(byCategory[c]));
+    const bgColors = categories.map(c => (categoryColors[c] || categoryColors['Other']).bg);
+    const borderColors = categories.map(c => (categoryColors[c] || categoryColors['Other']).border);
+
+    const ctx = document.getElementById('waitStatsChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: categories,
+                datasets: [{
+                    label: 'Wait Time (ms)',
+                    data: values,
+                    backgroundColor: bgColors,
+                    borderColor: borderColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    title: { display: true, text: 'Wait Time por Categoria (ms)', color: getComputedStyle(document.documentElement).getPropertyValue('--text-primary').trim() }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() },
+                        grid: { color: getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim() }
+                    },
+                    x: {
+                        ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+})();
+{% endif %}
+</script>
+{% endblock %}

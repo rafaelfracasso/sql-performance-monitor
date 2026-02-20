@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <div>
+            <h2>{{ page_title }}</h2>
+            <p class="subtitle">Monitoramento de alertas e hotspots</p>
+        </div>
+        {% if database or table %}
+        <div class="active-filters">
+            {% if instance %}
+            <span class="filter-tag">Instancia: {{ instance }}</span>
+            {% endif %}
+            {% if database %}
+            <span class="filter-tag">Database: {{ database }}</span>
+            {% endif %}
+            {% if table %}
+            <span class="filter-tag">Tabela: {{ table }}</span>
+            {% endif %}
+            <a href="/dashboard/alerts?period={{ period }}{% if severity_filter %}&severity={{ severity_filter }}{% endif %}" class="clear-filters">Limpar filtros</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="filters-panel">
+    <form method="get" action="/dashboard/alerts" class="filters-form">
+        <div class="filters-main">
+            <div class="filter-chips">
+                <label for="period">Período:</label>
+                <select name="period" id="period" onchange="this.form.submit()" class="chip-select">
+                    <option value="24h" {% if period == '24h' %}selected{% endif %}>24 horas</option>
+                    <option value="7d" {% if period == '7d' %}selected{% endif %}>7 dias</option>
+                    <option value="30d" {% if period == '30d' %}selected{% endif %}>30 dias</option>
+                </select>
+            </div>
+            <div class="filter-chips">
+                <label for="severity">Severidade:</label>
+                <select name="severity" id="severity" onchange="this.form.submit()" class="chip-select">
+                    <option value="">Todas</option>
+                    <option value="critical" {% if severity_filter == 'critical' %}selected{% endif %}>Critical</option>
+                    <option value="high" {% if severity_filter == 'high' %}selected{% endif %}>High</option>
+                    <option value="medium" {% if severity_filter == 'medium' %}selected{% endif %}>Medium</option>
+                    <option value="low" {% if severity_filter == 'low' %}selected{% endif %}>Low</option>
+                </select>
+            </div>
+            <div class="filter-chips">
+                <label for="instance">Instância:</label>
+                <select name="instance" id="instance" onchange="this.form.submit()" class="chip-select">
+                    <option value="">Todas</option>
+                    {% for inst in instance_filter %}
+                    <option value="{{ inst }}" {% if instance == inst %}selected{% endif %}>{{ inst }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Stats Cards (usando totais reais, nao filtrados por severidade) -->
+<div class="metrics-grid">
+    <div class="metric-card metric-error {% if severity_filter == 'critical' %}selected{% endif %}">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--error-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ alert_totals.critical }}</div>
+                <div class="metric-label">Critical</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card metric-warning {% if severity_filter == 'high' %}selected{% endif %}">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--warning-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ alert_totals.high }}</div>
+                <div class="metric-label">High</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card {% if severity_filter == 'medium' %}selected{% endif %}">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:#eab308; flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ alert_totals.medium }}</div>
+                <div class="metric-label">Medium</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card metric-success {% if severity_filter == 'low' %}selected{% endif %}">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--success-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ alert_totals.low }}</div>
+                <div class="metric-label">Low</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hotspots -->
+{% if hotspots %}
+<div class="section">
+    <div class="section-header">
+        <h3>Hotspots - Tabelas com Mais Alertas</h3>
+        <span class="badge">{{ hotspots|length }} hotspots</span>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Instância</th>
+                    <th>Banco</th>
+                    <th>Tabela</th>
+                    <th>Total Alertas</th>
+                    <th>Critical</th>
+                    <th>High</th>
+                    <th>Medium</th>
+                    <th>Low</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for hotspot in hotspots[:20] %}
+                <tr class="clickable-row" onclick="viewHotspotAlerts('{{ hotspot.instance_name }}', '{{ hotspot.database_name }}', '{{ hotspot.table_name }}')" title="Clique para ver todos os alertas desta tabela">
+                    <td>{{ hotspot.instance_name }}</td>
+                    <td>{{ hotspot.database_name }}</td>
+                    <td><strong>{{ hotspot.table_name }}</strong></td>
+                    <td class="number"><strong>{{ hotspot.total_alerts }}</strong></td>
+                    <td class="number severity-critical-cell">{{ hotspot.critical_count }}</td>
+                    <td class="number severity-high-cell">{{ hotspot.high_count }}</td>
+                    <td class="number severity-medium-cell">{{ hotspot.medium_count }}</td>
+                    <td class="number severity-low-cell">{{ hotspot.low_count }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Lista de Alertas -->
+<div class="section">
+    <div class="section-header">
+        <h3>Alertas Recentes</h3>
+        <span class="badge">{{ alerts|length }} alertas</span>
+    </div>
+
+    {% if alerts %}
+    <div class="alerts-list">
+        {% for alert in alerts %}
+        <div class="alert-item alert-{{ alert.severity }} clickable-alert" onclick="viewAlertDetails({{ alert.id }})">
+            <div class="alert-time">{{ alert.alert_time.strftime('%d/%m/%Y %H:%M') }}</div>
+            <div class="alert-content">
+                <div class="alert-title">
+                    <strong>{{ alert.instance_name }}</strong> - {{ alert.alert_type|replace('_', ' ')|title }}
+                </div>
+                <div class="alert-details">
+                    {% if alert.database_name %}
+                    {{ alert.database_name }}.{{ alert.table_name }} -
+                    {% endif %}
+                    Threshold: {{ alert.threshold_value|format_number }},
+                    Atual: {{ alert.actual_value|format_number }}
+                </div>
+                {% if alert.query_preview %}
+                <div class="alert-query">
+                    <code>{{ alert.query_preview[:150] }}...</code>
+                </div>
+                {% endif %}
+            </div>
+            <div class="alert-severity">
+                <span class="severity-badge severity-{{ alert.severity }}">{{ alert.severity|upper }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-message">Nenhum alerta encontrado para os filtros selecionados.</p>
+    {% endif %}
+</div>
+
+<!-- Gráfico de Alertas por Tipo -->
+{% if alerts %}
+<div class="section">
+    <h3>Alertas por Tipo</h3>
+    <div class="chart-center">
+        <canvas id="alertsByTypeChart"></canvas>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_head %}
+<!-- Styles moved to style.css -->
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+{% if alerts %}
+// Agrupar alertas por tipo
+const alertsByType = {};
+const alertsData = [
+    {% for alert in alerts %}
+    { alert_type: "{{ alert.alert_type }}" }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+alertsData.forEach(alert => {
+    const type = alert.alert_type;
+    alertsByType[type] = (alertsByType[type] || 0) + 1;
+});
+
+const labels = Object.keys(alertsByType);
+const data = Object.values(alertsByType);
+
+// Criar gráfico
+SQLMonitor.ChartFactory.createBar('alertsByTypeChart', {
+    data: {
+        labels: labels.map(l => l.replace(/_/g, ' ')),
+        datasets: [{
+            label: 'Quantidade de Alertas',
+            data: data,
+            backgroundColor: SQLMonitor.ChartFactory.colors.error,
+            borderColor: SQLMonitor.ChartFactory.colors.error,
+            borderWidth: 1
+        }]
+    },
+    options: {
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            y: {
+                ticks: { stepSize: 1 }
+            }
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

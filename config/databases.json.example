@@ -1,0 +1,66 @@
+{
+  "databases": [
+    {
+      "name": "SQL Server - Produção",
+      "type": "SQLSERVER",
+      "enabled": true,
+      "credentials": {
+        "server": "sqlserver-prod.example.com",
+        "port": "1433",
+        "database": "master",
+        "username": "monitor_user",
+        "password": "${SQL_SERVER_PROD_PASSWORD}",
+        "driver": "ODBC Driver 18 for SQL Server"
+      }
+    },
+    {
+      "name": "SQL Server - Desenvolvimento",
+      "type": "SQLSERVER",
+      "enabled": false,
+      "credentials": {
+        "server": "sqlserver-dev.example.com",
+        "port": "1433",
+        "database": "master",
+        "username": "monitor_user",
+        "password": "${SQL_SERVER_DEV_PASSWORD}",
+        "driver": "ODBC Driver 18 for SQL Server"
+      }
+    },
+    {
+      "name": "PostgreSQL - Produção",
+      "type": "POSTGRESQL",
+      "enabled": true,
+      "credentials": {
+        "server": "postgresql-prod.example.com",
+        "port": "5432",
+        "database": "postgres",
+        "username": "monitor_user",
+        "password": "${POSTGRESQL_PROD_PASSWORD}"
+      }
+    },
+    {
+      "name": "PostgreSQL - Desenvolvimento",
+      "type": "POSTGRESQL",
+      "enabled": false,
+      "credentials": {
+        "server": "postgresql-dev.example.com",
+        "port": "5432",
+        "database": "postgres",
+        "username": "monitor_user",
+        "password": "${POSTGRESQL_DEV_PASSWORD}"
+      }
+    },
+    {
+      "name": "SAP HANA - Produção",
+      "type": "HANA",
+      "enabled": false,
+      "credentials": {
+        "server": "hana-prod.example.com",
+        "port": "30015",
+        "database": "SYSTEMDB",
+        "username": "monitor_user",
+        "password": "${HANA_PROD_PASSWORD}"
+      }
+    }
+  ]
+}

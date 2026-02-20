@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Métricas de Uso de LLM</h2>
+    <p class="subtitle">Análise de consumo de tokens, custos e latência (Últimos {{ days }} dias)</p>
+</div>
+
+<!-- Cards de Resumo -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:#8b5cf6; flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ stats.totals.analyses|format_number }}</div>
+                <div class="metric-label">Total Analises</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--primary-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ stats.totals.tokens|format_number }}</div>
+                <div class="metric-label">Total Tokens</div>
+                <div class="metric-sublabel">{{ stats.totals.prompt_tokens|format_number }} in + {{ stats.totals.completion_tokens|format_number }} out</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card metric-warning">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--warning-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">${{ "%.4f"|format(stats.totals.cost_usd) }}</div>
+                <div class="metric-label">Custo Total (USD)</div>
+                <div class="metric-sublabel">R$ {{ "%.2f"|format(stats.totals.cost_brl) }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--primary-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ "%.0f"|format(stats.totals.avg_latency_ms) }}ms</div>
+                <div class="metric-label">Latencia Media</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos -->
+<div class="charts-grid">
+    <div class="chart-card">
+        <h4>Custo Diário (USD)</h4>
+        <div class="chart-wrapper">
+            <canvas id="dailyCostChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-card">
+        <h4>Tokens por Modelo</h4>
+        <div class="chart-wrapper">
+            <canvas id="tokensModelChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Tabela por Modelo -->
+<div class="section">
+    <h3>Detalhamento por Modelo</h3>
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Modelo</th>
+                    <th>Análises</th>
+                    <th>Tokens</th>
+                    <th>Custo (USD)</th>
+                    <th>Latência Média (ms)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for model in stats.by_model %}
+                <tr>
+                    <td>{{ model.model }}</td>
+                    <td class="number">{{ model.count|format_number }}</td>
+                    <td class="number">{{ model.tokens|format_number }}</td>
+                    <td class="number">${{ "%.4f"|format(model.cost_usd) }}</td>
+                    <td class="number">{{ "%.0f"|format(model.avg_latency) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Dados para gráficos
+const dailyData = {{ stats.by_day|tojson }};
+const modelData = {{ stats.by_model|tojson }};
+
+// Gráfico de Custo Diário
+SQLMonitor.ChartFactory.createBar('dailyCostChart', {
+    data: {
+        labels: dailyData.map(d => d.day),
+        datasets: [{
+            label: 'Custo (USD)',
+            data: dailyData.map(d => d.cost_usd),
+            backgroundColor: SQLMonitor.ChartFactory.colors.warning
+        }]
+    }
+});
+
+// Gráfico de Tokens por Modelo
+SQLMonitor.ChartFactory.createDoughnut('tokensModelChart', {
+    data: {
+        labels: modelData.map(d => d.model),
+        datasets: [{
+            data: modelData.map(d => d.tokens),
+            backgroundColor: [
+                SQLMonitor.ChartFactory.colors.primary,
+                SQLMonitor.ChartFactory.colors.success,
+                SQLMonitor.ChartFactory.colors.warning,
+                SQLMonitor.ChartFactory.colors.error,
+                SQLMonitor.ChartFactory.colors.secondary
+            ]
+        }]
+    }
+});
+</script>
+{% endblock %}

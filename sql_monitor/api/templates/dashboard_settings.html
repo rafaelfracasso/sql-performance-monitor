@@ -1,0 +1,1023 @@
+{% extends "base.html" %}
+
+{% block title %}Configuracoes - SQL Monitor{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/settings.css?v={{ range(1, 10000) | random }}">
+{% endblock %}
+
+{% block content %}
+<div class="content-header">
+    <h2>Configuracoes</h2>
+    <p class="text-muted">Gerencie thresholds, LLM, notificacoes, infraestrutura e seguranca</p>
+</div>
+
+<div class="settings-tabs">
+    <button class="tab-btn active" data-tab="performance">Performance</button>
+    <button class="tab-btn" data-tab="llm-prompts">LLM &amp; Prompts</button>
+    <button class="tab-btn" data-tab="notifications">Notificacoes</button>
+    <button class="tab-btn" data-tab="infrastructure">Infraestrutura</button>
+    <button class="tab-btn" data-tab="weekly_optimizer">Weekly Optimizer</button>
+    <button class="tab-btn" data-tab="security-audit">Seguranca &amp; Auditoria</button>
+</div>
+
+<!-- ==================== TAB: PERFORMANCE ==================== -->
+<div id="performance" class="tab-content active">
+
+    <!-- Thresholds -->
+    <div class="settings-card">
+        <div class="settings-card-header">
+            <div class="card-icon" style="background: var(--error-color);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            </div>
+            <h4>Thresholds de Performance</h4>
+        </div>
+        <div class="settings-card-body">
+            <p class="text-muted" style="margin-bottom:1rem">Configure limites especificos para cada tipo de banco. Queries que excederem QUALQUER threshold serao analisadas.</p>
+
+            <div class="accordion" id="thresholdsAccordion">
+                <!-- HANA -->
+                <div class="accordion-item">
+                    <div class="accordion-header" onclick="toggleAccordion('hana')">
+                        <h4>SAP HANA</h4>
+                        <span class="accordion-icon">&#9660;</span>
+                    </div>
+                    <div id="hana" class="accordion-content open">
+                        <form id="form-thresholds-hana" class="settings-form">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Tempo de Execucao</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" name="execution_time_ms" required placeholder="100">
+                                        <span class="input-suffix">ms</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Tempo de CPU</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" name="cpu_time_ms" required placeholder="50">
+                                        <span class="input-suffix">ms</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Leituras Logicas</label>
+                                    <input type="number" class="form-control" name="logical_reads" required placeholder="10000">
+                                    <small>Numero de paginas lidas da memoria</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Leituras Fisicas</label>
+                                    <input type="number" class="form-control" name="physical_reads" required placeholder="1000">
+                                    <small>Numero de paginas lidas do disco</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Escritas</label>
+                                    <input type="number" class="form-control" name="writes" required placeholder="500">
+                                </div>
+                                <div class="form-group">
+                                    <label>Tempo de Espera</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" name="wait_time_ms" required placeholder="1000">
+                                        <span class="input-suffix">ms</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Memoria</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" name="memory_mb" required placeholder="200">
+                                        <span class="input-suffix">MB</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Contagem de Linhas</label>
+                                    <input type="number" class="form-control" name="row_count" required placeholder="50000">
+                                    <small>Numero maximo de linhas retornadas</small>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar HANA</button>
+                                <button type="button" class="btn btn-secondary btn-icon" onclick="resetDefaults('hana')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Resetar Padroes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- SQL Server -->
+                <div class="accordion-item">
+                    <div class="accordion-header" onclick="toggleAccordion('sqlserver')">
+                        <h4>SQL Server</h4>
+                        <span class="accordion-icon">&#9660;</span>
+                    </div>
+                    <div id="sqlserver" class="accordion-content">
+                        <form id="form-thresholds-sqlserver" class="settings-form">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Tempo de Execucao</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" name="execution_time_ms" required placeholder="30000">
+                                        <span class="input-suffix">ms</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Tempo de CPU</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" name="cpu_time_ms" required placeholder="10000">
+                                        <span class="input-suffix">ms</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Leituras Logicas</label>
+                                    <input type="number" class="form-control" name="logical_reads" required placeholder="50000">
+                                    <small>Numero de paginas lidas da memoria</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Leituras Fisicas</label>
+                                    <input type="number" class="form-control" name="physical_reads" required placeholder="10000">
+                                    <small>Numero de paginas lidas do disco</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Escritas</label>
+                                    <input type="number" class="form-control" name="writes" required placeholder="5000">
+                                </div>
+                                <div class="form-group">
+                                    <label>Tempo de Espera</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" name="wait_time_ms" required placeholder="5000">
+                                        <span class="input-suffix">ms</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Memoria</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" name="memory_mb" required placeholder="500">
+                                        <span class="input-suffix">MB</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Contagem de Linhas</label>
+                                    <input type="number" class="form-control" name="row_count" required placeholder="100000">
+                                    <small>Numero maximo de linhas retornadas</small>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar SQL Server</button>
+                                <button type="button" class="btn btn-secondary btn-icon" onclick="resetDefaults('sqlserver')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Resetar Padroes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- PostgreSQL -->
+                <div class="accordion-item">
+                    <div class="accordion-header" onclick="toggleAccordion('postgresql')">
+                        <h4>PostgreSQL</h4>
+                        <span class="accordion-icon">&#9660;</span>
+                    </div>
+                    <div id="postgresql" class="accordion-content">
+                        <form id="form-thresholds-postgresql" class="settings-form">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Tempo de Execucao</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" name="execution_time_ms" required placeholder="10000">
+                                        <span class="input-suffix">ms</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Tempo de CPU</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" name="cpu_time_ms" required placeholder="5000">
+                                        <span class="input-suffix">ms</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Leituras Logicas</label>
+                                    <input type="number" class="form-control" name="logical_reads" required placeholder="30000">
+                                    <small>Numero de paginas lidas da memoria</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Leituras Fisicas</label>
+                                    <input type="number" class="form-control" name="physical_reads" required placeholder="5000">
+                                    <small>Numero de paginas lidas do disco</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Escritas</label>
+                                    <input type="number" class="form-control" name="writes" required placeholder="3000">
+                                </div>
+                                <div class="form-group">
+                                    <label>Tempo de Espera</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" name="wait_time_ms" required placeholder="3000">
+                                        <span class="input-suffix">ms</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Memoria</label>
+                                    <div class="input-group">
+                                        <input type="number" class="form-control" name="memory_mb" required placeholder="300">
+                                        <span class="input-suffix">MB</span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Contagem de Linhas</label>
+                                    <input type="number" class="form-control" name="row_count" required placeholder="80000">
+                                    <small>Numero maximo de linhas retornadas</small>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar PostgreSQL</button>
+                                <button type="button" class="btn btn-secondary btn-icon" onclick="resetDefaults('postgresql')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Resetar Padroes</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collection Settings -->
+    <div class="settings-card">
+        <div class="settings-card-header">
+            <div class="card-icon" style="background: var(--primary-color);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </div>
+            <h4>Coleta de Queries</h4>
+        </div>
+        <div class="settings-card-body">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>DBType</th>
+                        <th>Min Duration (s)</th>
+                        <th>Active Queries</th>
+                        <th>Expensive Queries</th>
+                        <th>Table Scans</th>
+                        <th>Max Queries/Ciclo</th>
+                        <th>Acoes</th>
+                    </tr>
+                </thead>
+                <tbody id="collection-settings-table"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Cache Meta -->
+    <div class="settings-card">
+        <div class="settings-card-header">
+            <div class="card-icon" style="background: var(--success-color);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            </div>
+            <h4>Cache de Metadados</h4>
+        </div>
+        <div class="settings-card-body">
+            <form id="form-cache-config" class="settings-form">
+                <div class="form-group">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="enabled">
+                        <span class="toggle-slider"></span>
+                        <span>Cache Habilitado</span>
+                    </label>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>TTL</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="ttl_hours" required>
+                            <span class="input-suffix">horas</span>
+                        </div>
+                        <small>Tempo de vida dos dados em cache</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Max Entries</label>
+                        <input type="number" class="form-control" name="max_entries" required>
+                        <small>Numero maximo de entradas no cache</small>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="cache_ddl">
+                        <span class="toggle-slider"></span>
+                        <span>Cache DDL</span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="cache_indexes">
+                        <span class="toggle-slider"></span>
+                        <span>Cache Indexes</span>
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar</button>
+                    <button type="button" class="btn btn-secondary btn-icon" onclick="clearCache()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Limpar Cache</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== TAB: LLM & PROMPTS ==================== -->
+<div id="llm-prompts" class="tab-content">
+
+    <!-- LLM Config -->
+    <div class="settings-card">
+        <div class="settings-card-header">
+            <div class="card-icon" style="background: #8b5cf6;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/><path d="M8 6a4 4 0 0 1 8 0"/></svg>
+            </div>
+            <h4>Configuracao de LLM</h4>
+        </div>
+        <div class="settings-card-body">
+            <form id="form-llm-config" class="settings-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Provider</label>
+                        <select class="form-control" name="provider" required>
+                            <option value="gemini">Google Gemini</option>
+                            <option value="openai">OpenAI GPT</option>
+                            <option value="anthropic">Anthropic Claude</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Model</label>
+                        <input type="text" class="form-control" name="model" placeholder="gemini-flash-latest" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Temperature</label>
+                        <input type="number" class="form-control" name="temperature" step="0.1" min="0" max="2" required>
+                        <small>0 = mais deterministico, 2 = mais criativo</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Max Tokens</label>
+                        <input type="number" class="form-control" name="max_tokens" required>
+                        <small>Limite de tokens na resposta da LLM</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Max Retries</label>
+                        <input type="number" class="form-control" name="max_retries" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Retry Delays</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="retry_delays" placeholder="[3, 8, 15]">
+                            <span class="input-suffix">s</span>
+                        </div>
+                        <small>Array JSON com delays entre tentativas</small>
+                    </div>
+                </div>
+
+                <hr class="section-divider">
+                <h4>Rate Limits</h4>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Max Requests/Day</label>
+                        <input type="number" class="form-control" name="max_requests_per_day" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Max Requests/Minute</label>
+                        <input type="number" class="form-control" name="max_requests_per_minute" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Max Requests/Cycle</label>
+                        <input type="number" class="form-control" name="max_requests_per_cycle" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Min Delay Between Requests</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="min_delay_between_requests" step="0.1" required>
+                            <span class="input-suffix">s</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar Configuracao de LLM</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Prompts -->
+    <div class="settings-card">
+        <div class="settings-card-header">
+            <div class="card-icon" style="background: #ec4899;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <h4>Gerenciamento de Prompts LLM</h4>
+        </div>
+        <div class="settings-card-body">
+            <div class="settings-alert settings-alert-info">
+                <strong>Versionamento:</strong> Cada alteracao cria uma nova versao. Voce pode reverter para versoes anteriores pelo historico.
+            </div>
+            <div class="form-group" style="margin-bottom:1rem">
+                <label>Tipo de Banco</label>
+                <select class="form-control" id="prompt-db-type" onchange="loadPromptsForDbType()">
+                    <option value="">Selecione...</option>
+                    <option value="sqlserver">SQL Server</option>
+                    <option value="hana">SAP HANA</option>
+                    <option value="postgresql">PostgreSQL</option>
+                </select>
+            </div>
+            <div id="prompts-editor" style="display: none;">
+                <div class="accordion" id="promptsAccordion"></div>
+            </div>
+
+            <!-- Modal de Historico -->
+            <div id="history-modal" class="modal" style="display: none;">
+                <div class="modal-backdrop" onclick="closeHistoryModal()"></div>
+                <div class="modal-content" style="max-width: 800px;">
+                    <div class="modal-header">
+                        <h3>Historico de Versoes</h3>
+                        <button class="modal-close" onclick="closeHistoryModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Versao</th>
+                                    <th>Data</th>
+                                    <th>Usuario</th>
+                                    <th>Motivo</th>
+                                    <th>Tamanho</th>
+                                    <th>Status</th>
+                                    <th>Acao</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== TAB: NOTIFICATIONS ==================== -->
+<div id="notifications" class="tab-content">
+
+    <!-- Teams -->
+    <div class="settings-card">
+        <div class="settings-card-header">
+            <div class="card-icon" style="background: #6366f1;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </div>
+            <h4>Integracao com Microsoft Teams</h4>
+        </div>
+        <div class="settings-card-body">
+            <form id="form-teams-config" class="settings-form">
+                <div class="form-group">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="enabled">
+                        <span class="toggle-slider"></span>
+                        <span>Habilitar Integracao com Teams</span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>Webhook URL (Power Automate)</label>
+                    <textarea class="form-control" name="webhook_url" rows="3" placeholder="https://..."></textarea>
+                    <small>URL do webhook configurado no Power Automate</small>
+                </div>
+                <div class="form-group">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="notify_on_cache_hit">
+                        <span class="toggle-slider"></span>
+                        <span>Notificar tambem em Cache Hits</span>
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>Priority Filter (JSON Array)</label>
+                    <input type="text" class="form-control" name="priority_filter" placeholder='["high", "critical"]'>
+                    <small>Apenas notificar para prioridades listadas</small>
+                </div>
+                <div class="form-group">
+                    <label>Timeout</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" name="timeout" required>
+                        <span class="input-suffix">s</span>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar Teams</button>
+                    <button type="button" class="btn btn-secondary btn-icon" onclick="testTeamsWebhook()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg> Testar Webhook</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Monitor -->
+    <div class="settings-card">
+        <div class="settings-card-header">
+            <div class="card-icon" style="background: var(--warning-color);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <h4>Intervalo de Monitoramento</h4>
+        </div>
+        <div class="settings-card-body">
+            <form id="form-monitor-config" class="settings-form">
+                <div class="form-group">
+                    <label>Intervalo entre Verificacoes</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" name="interval_seconds" required>
+                        <span class="input-suffix">s</span>
+                    </div>
+                    <small>Frequencia de execucao do monitor. Padrao: 60s</small>
+                </div>
+                <div class="settings-alert settings-alert-info">
+                    <strong>Nota:</strong> Esta mudanca afetara o proximo ciclo de monitoramento.
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar Monitor</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== TAB: INFRASTRUCTURE ==================== -->
+<div id="infrastructure" class="tab-content">
+
+    <!-- Timeouts -->
+    <div class="settings-card">
+        <div class="settings-card-header">
+            <div class="card-icon" style="background: #f97316;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <h4>Timeouts</h4>
+        </div>
+        <div class="settings-card-body">
+            <form id="form-timeouts-config" class="settings-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Database Connect</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="database_connect" required>
+                            <span class="input-suffix">s</span>
+                        </div>
+                        <small>Tempo maximo para conectar ao banco</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Database Query</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="database_query" required>
+                            <span class="input-suffix">s</span>
+                        </div>
+                        <small>Tempo maximo para execucao de query</small>
+                    </div>
+                    <div class="form-group">
+                        <label>LLM Analysis</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="llm_analysis" required>
+                            <span class="input-suffix">s</span>
+                        </div>
+                        <small>Timeout da chamada a LLM</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Thread Shutdown</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="thread_shutdown" required>
+                            <span class="input-suffix">s</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Circuit Breaker Recovery</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="circuit_breaker_recovery" required>
+                            <span class="input-suffix">s</span>
+                        </div>
+                        <small>Tempo para tentar reconectar apos falha</small>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar Timeouts</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Storage -->
+    <div class="settings-card">
+        <div class="settings-card-header">
+            <div class="card-icon" style="background: #0891b2;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            </div>
+            <h4>Armazenamento (DuckDB)</h4>
+        </div>
+        <div class="settings-card-body">
+            <form id="form-storage-config" class="settings-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Caminho do Banco de Dados</label>
+                        <input type="text" class="form-control" name="db_path" placeholder="logs/metrics.duckdb" required>
+                        <small>Mudancas no caminho requerem restart</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Retencao de Dados</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="retention_days" required>
+                            <span class="input-suffix">dias</span>
+                        </div>
+                        <small>Dados mais antigos serao removidos automaticamente</small>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="enable_compression">
+                        <span class="toggle-slider"></span>
+                        <span>Habilitar Compressao</span>
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar Armazenamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Query Cache -->
+    <div class="settings-card">
+        <div class="settings-card-header">
+            <div class="card-icon" style="background: var(--success-color);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            </div>
+            <h4>Cache de Analises LLM</h4>
+        </div>
+        <div class="settings-card-body">
+            <form id="form-query-cache-config" class="settings-form">
+                <div class="form-group">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="enabled">
+                        <span class="toggle-slider"></span>
+                        <span>Habilitar Query Cache</span>
+                    </label>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>TTL</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="ttl_hours" required>
+                            <span class="input-suffix">horas</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Arquivo de Cache</label>
+                        <input type="text" class="form-control" name="cache_file" placeholder="logs/query_cache.json">
+                    </div>
+                    <div class="form-group">
+                        <label>Auto Save Interval</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="auto_save_interval" required>
+                            <span class="input-suffix">s</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar Query Cache</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Logging -->
+    <div class="settings-card">
+        <div class="settings-card-header">
+            <div class="card-icon" style="background: var(--secondary-color);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </div>
+            <h4>Logging</h4>
+        </div>
+        <div class="settings-card-body">
+            <form id="form-logging-config" class="settings-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Nivel de Log</label>
+                        <select class="form-control" name="level" required>
+                            <option value="DEBUG">DEBUG</option>
+                            <option value="INFO">INFO</option>
+                            <option value="WARNING">WARNING</option>
+                            <option value="ERROR">ERROR</option>
+                            <option value="CRITICAL">CRITICAL</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Formato</label>
+                        <select class="form-control" name="format" required>
+                            <option value="colored">Colored</option>
+                            <option value="json">JSON</option>
+                            <option value="simple">Simple</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Arquivo de Log</label>
+                        <input type="text" class="form-control" name="log_file" placeholder="logs/monitor.log" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="enable_console">
+                        <span class="toggle-slider"></span>
+                        <span>Habilitar Log no Console</span>
+                    </label>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar Logging</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== TAB: WEEKLY OPTIMIZER ==================== -->
+<div id="weekly_optimizer" class="tab-content">
+    <div class="settings-card">
+        <div class="settings-card-header">
+            <div class="card-icon" style="background: #059669;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <h4>Weekly Optimizer</h4>
+        </div>
+        <div class="settings-card-body">
+            <form id="form-weekly-optimizer-config" class="settings-form">
+                <div class="form-group">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="enabled">
+                        <span class="toggle-slider"></span>
+                        <span>Habilitar Weekly Optimizer</span>
+                    </label>
+                </div>
+
+                <hr class="section-divider">
+                <h4>Agendamento</h4>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Dia de Analise</label>
+                        <select class="form-control" name="analysis_day" required>
+                            <option value="monday">Segunda</option>
+                            <option value="tuesday">Terca</option>
+                            <option value="wednesday">Quarta</option>
+                            <option value="thursday">Quinta</option>
+                            <option value="friday">Sexta</option>
+                            <option value="saturday">Sabado</option>
+                            <option value="sunday">Domingo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Horario de Analise</label>
+                        <input type="text" class="form-control" name="analysis_time" placeholder="18:00" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Dia de Execucao</label>
+                        <select class="form-control" name="execution_day" required>
+                            <option value="monday">Segunda</option>
+                            <option value="tuesday">Terca</option>
+                            <option value="wednesday">Quarta</option>
+                            <option value="thursday">Quinta</option>
+                            <option value="friday">Sexta</option>
+                            <option value="saturday">Sabado</option>
+                            <option value="sunday">Domingo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Horario de Execucao</label>
+                        <input type="text" class="form-control" name="execution_time" placeholder="02:00" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Dia de Relatorio</label>
+                        <select class="form-control" name="report_day" required>
+                            <option value="monday">Segunda</option>
+                            <option value="tuesday">Terca</option>
+                            <option value="wednesday">Quarta</option>
+                            <option value="thursday">Quinta</option>
+                            <option value="friday">Sexta</option>
+                            <option value="saturday">Sabado</option>
+                            <option value="sunday">Domingo</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Horario de Relatorio</label>
+                        <input type="text" class="form-control" name="report_time" placeholder="08:00" required>
+                    </div>
+                </div>
+
+                <hr class="section-divider">
+                <h4>Janela de Veto</h4>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Horas para Veto</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="veto_window_hours" required>
+                            <span class="input-suffix">horas</span>
+                        </div>
+                        <small>Tempo disponivel para vetar a execucao</small>
+                    </div>
+                    <div class="form-group" style="justify-content: center;">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="check_before_execution">
+                            <span class="toggle-slider"></span>
+                            <span>Verificar Vetos Antes de Executar</span>
+                        </label>
+                    </div>
+                </div>
+
+                <hr class="section-divider">
+                <h4>Thresholds de Risco</h4>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Tabela Media</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="table_size_gb_medium" required>
+                            <span class="input-suffix">GB</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Tabela Grande</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="table_size_gb_high" required>
+                            <span class="input-suffix">GB</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Tabela Critica</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="table_size_gb_critical" required>
+                            <span class="input-suffix">GB</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Fragmentacao de Indice</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="index_fragmentation_percent" required>
+                            <span class="input-suffix">%</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Tempo Max Execucao</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="max_execution_time_minutes" required>
+                            <span class="input-suffix">min</span>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="section-divider">
+                <h4>Rollback Automatico</h4>
+                <div class="form-grid">
+                    <div class="form-group" style="justify-content: center;">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="auto_rollback_enabled">
+                            <span class="toggle-slider"></span>
+                            <span>Habilitar Rollback Automatico</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>Threshold de Degradacao</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="degradation_threshold_percent" required>
+                            <span class="input-suffix">%</span>
+                        </div>
+                        <small>Performance abaixo deste % dispara rollback</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Aguardar Apos Execucao</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="wait_after_execution_minutes" required>
+                            <span class="input-suffix">min</span>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="section-divider">
+                <h4>API Web</h4>
+                <div class="form-grid">
+                    <div class="form-group" style="justify-content: center;">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="api_enabled">
+                            <span class="toggle-slider"></span>
+                            <span>Habilitar API</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>Host</label>
+                        <input type="text" class="form-control" name="api_host" placeholder="0.0.0.0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Porta</label>
+                        <input type="number" class="form-control" name="api_port" required>
+                    </div>
+                    <div class="form-group" style="justify-content: center;">
+                        <label class="toggle-switch">
+                            <input type="checkbox" name="cors_enabled">
+                            <span class="toggle-slider"></span>
+                            <span>Habilitar CORS</span>
+                        </label>
+                    </div>
+                </div>
+
+                <hr class="section-divider">
+                <h4>Analise de Queries</h4>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Dias de Historico</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="analysis_days" required>
+                            <span class="input-suffix">dias</span>
+                        </div>
+                        <small>Periodo de dados analisados</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Ocorrencias Minimas</label>
+                        <input type="number" class="form-control" name="min_occurrences" required>
+                        <small>Queries com menos ocorrencias sao ignoradas</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Duracao Media Minima</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="min_avg_duration_ms" required>
+                            <span class="input-suffix">ms</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar Weekly Optimizer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== TAB: SECURITY & AUDIT ==================== -->
+<div id="security-audit" class="tab-content">
+
+    <!-- Security -->
+    <div class="settings-card">
+        <div class="settings-card-header">
+            <div class="card-icon" style="background: var(--error-color);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <h4>Seguranca</h4>
+        </div>
+        <div class="settings-card-body">
+            <form id="form-security-config" class="settings-form">
+                <div class="form-group">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="sanitize_queries">
+                        <span class="toggle-slider"></span>
+                        <span>Sanitizar Queries (remover valores literais)</span>
+                    </label>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Prefixo do Placeholder</label>
+                        <input type="text" class="form-control" name="placeholder_prefix" placeholder="@p">
+                        <small>Prefixo usado para substituir valores literais</small>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="show_example_values">
+                        <span class="toggle-slider"></span>
+                        <span>Mostrar Valores de Exemplo</span>
+                    </label>
+                </div>
+                <div class="settings-alert settings-alert-info">
+                    <strong>Exemplo:</strong>
+                    <code>SELECT * FROM users WHERE id = 123</code> &rarr;
+                    <code>SELECT * FROM users WHERE id = @p1</code>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar Seguranca</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Audit -->
+    <div class="settings-card">
+        <div class="settings-card-header">
+            <div class="card-icon" style="background: var(--secondary-color);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </div>
+            <h4>Historico de Alteracoes</h4>
+        </div>
+        <div class="settings-card-body">
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Data/Hora</th>
+                            <th>Usuario</th>
+                            <th>Tabela</th>
+                            <th>Chave</th>
+                            <th>Acao</th>
+                        </tr>
+                    </thead>
+                    <tbody id="audit-log-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/settings.js?v={{ range(1, 10000) | random }}"></script>
+{% endblock %}

@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Top Hosts Problematicos</h2>
+    <p class="subtitle">Maquinas de origem com maior impacto na performance</p>
+</div>
+
+<!-- Filtros -->
+<div class="filters-panel">
+    <form method="get" class="filters-form">
+        <div class="filters-main">
+            <div class="filter-chips">
+                <label for="period">Periodo:</label>
+                <select name="period" id="period" onchange="this.form.submit()" class="chip-select">
+                    <option value="24h" {% if period == '24h' %}selected{% endif %}>24 horas</option>
+                    <option value="7d" {% if period == '7d' %}selected{% endif %}>7 dias</option>
+                    <option value="30d" {% if period == '30d' %}selected{% endif %}>30 dias</option>
+                </select>
+            </div>
+            <div class="filter-chips">
+                <label for="instance">Instancia:</label>
+                <select name="instance" id="instance" onchange="this.form.submit()" class="chip-select">
+                    <option value="">Todas</option>
+                    {% for inst in instance_filter %}
+                    <option value="{{ inst }}" {% if instance == inst %}selected{% endif %}>{{ inst }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Summary Cards -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--primary-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ hosts|length }}</div>
+                <div class="metric-label">Total de Hosts</div>
+            </div>
+        </div>
+    </div>
+    <div class="metric-card metric-warning">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--warning-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ hosts|sum(attribute='total_occurrences')|format_number }}</div>
+                <div class="metric-label">Total de Ocorrencias</div>
+            </div>
+        </div>
+    </div>
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--secondary-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">
+                    {% if hosts %}{{ "%.0f"|format(hosts|map(attribute='avg_cpu_time_ms')|list|sum / hosts|length) }}{% else %}0{% endif %} ms
+                </div>
+                <div class="metric-label">CPU Medio Geral</div>
+            </div>
+        </div>
+    </div>
+    <div class="metric-card metric-error">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--error-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ hosts|sum(attribute='critical_alerts') }}</div>
+                <div class="metric-label">Alertas Criticos</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Graficos -->
+{% if hosts %}
+<div class="charts-grid">
+    <div class="section">
+        <h4>Top 10 por Volume de Queries</h4>
+        <div class="chart-wrapper">
+            <canvas id="hostsBarChart"></canvas>
+        </div>
+    </div>
+    <div class="section">
+        <h4>Distribuicao por Alertas</h4>
+        <div class="chart-wrapper">
+            <canvas id="hostsDoughnutChart"></canvas>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="section">
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Host</th>
+                    <th class="number">Queries Unicas</th>
+                    <th class="number">Ocorrencias</th>
+                    <th class="number">CPU Medio (ms)</th>
+                    <th class="number">CPU Maximo (ms)</th>
+                    <th class="number">Alertas Criticos</th>
+                    <th>Acoes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for host in hosts %}
+                <tr {% if host.critical_alerts > 0 %}style="background-color: rgba(239, 68, 68, 0.05);"{% endif %}>
+                    <td><strong>{{ host.host_name }}</strong></td>
+                    <td class="number">{{ host.unique_queries|format_number }}</td>
+                    <td class="number">{{ host.total_occurrences|format_number }}</td>
+                    <td class="number">{{ host.avg_cpu_time_ms|format_number }}</td>
+                    <td class="number">{{ host.max_cpu_time_ms|format_number }}</td>
+                    <td class="number">
+                        {% if host.critical_alerts > 0 %}
+                        <span class="badge badge-error">{{ host.critical_alerts }}</span>
+                        {% else %}
+                        0
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="/dashboard/queries?host_name={{ host.host_name }}" class="btn btn-sm btn-primary">Ver Queries</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if hosts %}
+<script>
+(function() {
+    const hosts = {{ hosts|tojson }};
+    const top10 = hosts.slice(0, 10);
+
+    SQLMonitor.ChartFactory.createBar('hostsBarChart', {
+        data: {
+            labels: top10.map(h => h.host_name.substring(0, 20)),
+            datasets: [{
+                label: 'Ocorrencias',
+                data: top10.map(h => h.total_occurrences),
+                backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                borderColor: 'rgb(16, 185, 129)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: { x: { grid: { color: 'rgba(75, 85, 99, 0.1)' } }, y: { grid: { display: false } } }
+        }
+    });
+
+    const withCritical = hosts.filter(h => h.critical_alerts > 0).length;
+    const withoutCritical = hosts.length - withCritical;
+    SQLMonitor.ChartFactory.createDoughnut('hostsDoughnutChart', {
+        data: {
+            labels: ['Com Alertas Criticos', 'Sem Alertas Criticos'],
+            datasets: [{
+                data: [withCritical, withoutCritical],
+                backgroundColor: [SQLMonitor.ChartFactory.colors.error, SQLMonitor.ChartFactory.colors.success],
+                borderWidth: 0
+            }]
+        },
+        options: { plugins: { legend: { position: 'right' } } }
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

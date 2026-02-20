@@ -1,0 +1,449 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-flex">
+        <div>
+            <h2>Detalhes da Query</h2>
+            <p class="subtitle">{{ query_info.instance_name }} - {{ query_info.database_name }}.{{ query_info.table_name }}</p>
+        </div>
+        <button onclick="history.back()" class="btn btn-secondary">Voltar</button>
+    </div>
+</div>
+
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--primary-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div>
+                {% if metrics.max_execution_count and metrics.max_execution_count > metrics.total_executions %}
+                <div class="metric-value">{{ metrics.max_execution_count|format_number }}</div>
+                <div class="metric-label">Total Execucoes (SQL)</div>
+                <div class="metric-sublabel">{{ metrics.total_executions|format_number }} coletas</div>
+                {% else %}
+                <div class="metric-value">{{ metrics.total_executions|default(0)|format_number }}</div>
+                <div class="metric-label">Total Coletas</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--error-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ metrics.avg_cpu_time_ms|default(0)|format_number }}ms</div>
+                <div class="metric-label">CPU Medio</div>
+                <div class="metric-sublabel">Max: {{ metrics.max_cpu_time_ms|default(0)|format_number }}ms</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--warning-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ metrics.avg_duration_ms|default(0)|format_number }}ms</div>
+                <div class="metric-label">Duration Medio</div>
+                <div class="metric-sublabel">Max: {{ metrics.max_duration_ms|default(0)|format_number }}ms</div>
+            </div>
+        </div>
+    </div>
+
+    {% if query_info.db_type == 'sqlserver' %}
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--success-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ metrics.avg_logical_reads|default(0)|format_number }}</div>
+                <div class="metric-label">Logical Reads Medio</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:#8b5cf6; flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ "%.2f"|format(metrics.avg_memory_mb or 0) }} MB</div>
+                <div class="metric-label">Memoria Media</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--secondary-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ metrics.avg_row_count|default(0)|format_number }}</div>
+                <div class="metric-label">Linhas Medias</div>
+            </div>
+        </div>
+    </div>
+
+    {% if metrics.avg_wait_time_ms and metrics.avg_wait_time_ms > 0 %}
+    <div class="metric-card metric-warning">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--warning-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ metrics.avg_wait_time_ms|default(0)|format_number }}ms</div>
+                <div class="metric-label">Wait Time Medio</div>
+                {% if metrics.last_wait_type %}
+                <div class="metric-sublabel">{{ metrics.last_wait_type }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if metrics.last_blocking_session_id %}
+    <div class="metric-card metric-error">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--error-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">Session {{ metrics.last_blocking_session_id }}</div>
+                <div class="metric-label">Ultimo Bloqueio</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Impacto Acumulado -->
+{% if metrics.total_cpu_impact > 0 or metrics.total_duration_impact > 0 %}
+<div class="section">
+    <div class="section-header">
+        <h3>Impacto Acumulado no Servidor</h3>
+    </div>
+    <div class="metrics-grid" style="grid-template-columns: repeat(2, 1fr);">
+        <div class="metric-card">
+            <div style="display:flex; align-items:flex-start; gap:1rem;">
+                <div style="color:var(--error-color); flex-shrink:0; margin-top:0.25rem;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg>
+                </div>
+                <div>
+                    <div class="metric-value">{{ metrics.total_cpu_impact|format_number }} ms</div>
+                    <div class="metric-label">CPU Total Consumido</div>
+                    <div class="metric-sublabel">{{ metrics.total_executions }} execucoes x {{ metrics.avg_cpu_time_ms|format_number }} ms medio</div>
+                </div>
+            </div>
+        </div>
+        <div class="metric-card">
+            <div style="display:flex; align-items:flex-start; gap:1rem;">
+                <div style="color:var(--warning-color); flex-shrink:0; margin-top:0.25rem;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div>
+                    <div class="metric-value">{{ metrics.total_duration_impact|format_number }} ms</div>
+                    <div class="metric-label">Duration Total</div>
+                    <div class="metric-sublabel">{{ metrics.total_executions }} execucoes x {{ metrics.avg_duration_ms|format_number }} ms medio</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="section">
+    <div class="section-header">
+        <h3>Informacoes da Query</h3>
+        <span class="badge">Hash: {{ query_hash[:16] }}...</span>
+    </div>
+
+    <div class="info-box">
+        <div class="grid-info">
+            <div>
+                <strong>Instância:</strong> {{ query_info.instance_name }}
+            </div>
+            <div>
+                <strong>Database:</strong> {{ query_info.database_name or 'N/A' }}
+            </div>
+            <div>
+                <strong>Tipo Banco:</strong> <span class="badge badge-info">{{ (query_info.db_type or 'unknown')|upper }}</span>
+            </div>
+            <div>
+                <strong>Schema/Tabela:</strong> {{ query_info.schema_name or 'dbo' }}.{{ query_info.table_name or 'N/A' }}
+            </div>
+            <div>
+                <strong>Tipo Query:</strong> {{ query_info.query_type or 'N/A' }}
+            </div>
+            <div>
+                <strong>Primeira Coleta:</strong> {{ query_info.collected_at.strftime('%d/%m/%Y %H:%M:%S') if query_info.collected_at else 'N/A' }}
+            </div>
+        </div>
+    </div>
+
+    <div class="section-header mt-4">
+        <h3>Contexto de Execução</h3>
+        <span class="badge">Rastreabilidade</span>
+    </div>
+    <div class="info-box">
+        <div class="grid-info">
+            <div><strong>Usuário:</strong> {{ query_info.login_name or 'N/A' }}</div>
+            <div><strong>Host:</strong> {{ query_info.host_name or 'N/A' }}</div>
+            <div><strong>Aplicação:</strong> {{ query_info.program_name or 'N/A' }}</div>
+            <div><strong>Interface:</strong> {{ query_info.client_interface_name or 'N/A' }}</div>
+            <div><strong>Session ID:</strong> {{ query_info.session_id or 'N/A' }}</div>
+        </div>
+    
+
+    <div class="header-flex mt-4 mb-2">
+        <h4>Query SQL</h4>
+        <button class="btn-view-query" onclick="openQueryModal('{{ query_hash }}')">Ver Query Completa</button>
+    </div>
+    <pre class="code-preview"><code>{{ (query_info.query_text or query_info.sanitized_query or query_info.query_preview)[:500]|format_sql }}{% if (query_info.query_text|length or 0) > 500 %}...{% endif %}</code></pre>
+    </div>
+</div>
+
+{% if blocking_info %}
+<div class="section">
+    <div class="section-header">
+        <h3>Query Bloqueadora</h3>
+        <span class="severity-badge severity-critical">BLOCKING</span>
+    </div>
+
+    <div class="info-box blocking-info">
+        <div class="blocking-header">
+            <span class="blocking-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+            </span>
+            <div>
+                <strong>Sessão {{ blocking_info.blocking_session_id }}</strong> está bloqueando esta query
+                <div class="blocking-meta">
+                    Tempo de espera: {{ "%.1f"|format(blocking_info.wait_time_seconds|default(0)) }}s
+                </div>
+            </div>
+        </div>
+
+        <div class="blocking-details">
+            <div class="blocking-detail-grid">
+                <div>
+                    <strong>Host:</strong> {{ blocking_info.blocking_host or 'N/A' }}
+                </div>
+                <div>
+                    <strong>Usuário:</strong> {{ blocking_info.blocking_login or 'N/A' }}
+                </div>
+                <div>
+                    <strong>Aplicação:</strong> {{ blocking_info.blocking_program or 'N/A' }}
+                </div>
+            </div>
+        </div>
+
+        {% if blocking_info.blocking_query %}
+        <div class="blocking-query">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                <strong>Query que está causando o bloqueio:</strong>
+                {% if blocking_info.blocker_query_hash %}
+                <a href="/dashboard/queries/{{ blocking_info.blocker_query_hash }}" class="btn btn-secondary btn-sm">
+                    Ver detalhes da query bloqueadora
+                </a>
+                {% endif %}
+            </div>
+            <pre class="code-preview blocking-code"><code>{{ blocking_info.blocking_query|format_sql }}</code></pre>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% if llm_analysis %}
+<div class="section">
+    <div class="section-header">
+        <h3>Análise LLM</h3>
+        <span class="severity-badge severity-{{ llm_analysis.severity }}">{{ llm_analysis.severity|upper }}</span>
+    </div>
+
+    <div class="info-box">
+        <div class="grid-info">
+            <span><strong>Modelo:</strong> {{ llm_analysis.model_used or 'N/A' }}</span>
+            <span><strong>Analisado em:</strong> {{ llm_analysis.analyzed_at.strftime('%d/%m/%Y %H:%M:%S') }}</span>
+            <span><strong>Tokens:</strong> {{ llm_analysis.tokens_used|default(0)|format_number }} 
+                ({{ llm_analysis.prompt_tokens|default(0)|format_number }} in + {{ llm_analysis.completion_tokens|default(0)|format_number }} out)</span>
+            {% if llm_analysis.estimated_cost_usd %}
+            <span><strong>Custo:</strong> ${{ "%.6f"|format(llm_analysis.estimated_cost_usd) }}
+                {% if llm_analysis.estimated_cost_brl %}(R$ {{ "%.4f"|format(llm_analysis.estimated_cost_brl) }}){% endif %}
+            </span>
+            {% endif %}
+            {% if llm_analysis.seen_count and llm_analysis.seen_count > 1 %}
+            <span style="color: var(--success-color);"><strong>Cache:</strong> {{ (llm_analysis.seen_count - 1)|format_number }}x reutilizado</span>
+            {% endif %}
+        </div>
+
+        <h4>Explicação do Problema</h4>
+        <div class="llm-explanation markdown-content">{{ llm_analysis.analysis_text }}</div>
+
+        {% if llm_analysis.recommendations %}
+        <h4>Recomendações</h4>
+        <div class="llm-recommendation markdown-content">{{ llm_analysis.recommendations }}</div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% if alert_groups %}
+<div class="section">
+    <div class="section-header">
+        <h3>Tipos de Problemas Recorrentes</h3>
+        <span class="badge">Agrupado por Tipo</span>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Tipo de Alerta</th>
+                    <th>Total Ocorrências</th>
+                    <th>Severidade (Max)</th>
+                    <th>Valor Médio</th>
+                    <th>Última Ocorrência</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for group in alert_groups %}
+                <tr>
+                    <td>
+                        <strong>{{ group.type|replace('_', ' ')|title }}</strong>
+                    </td>
+                    <td class="number">{{ group.count|format_number }}</td>
+                    <td>
+                        <span class="severity-badge severity-{{ group.severity }}">
+                            {{ group.severity|upper }}
+                        </span>
+                    </td>
+                    <td class="number">{{ group.avg_value|format_number }}</td>
+                    <td>{{ group.last_alert.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% if alerts %}
+<div class="section">
+    <div class="section-header">
+        <h3>Alertas de Performance (Últimos 10)</h3>
+        <span class="badge">{{ alerts|length }} alertas</span>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Severidade</th>
+                    <th>Threshold</th>
+                    <th>Valor Real</th>
+                    <th>Data/Hora</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alert in alerts %}
+                <tr class="clickable-row" onclick="window.location.href='/dashboard/alerts/{{ alert.id }}'">
+                    <td>{{ alert.alert_type|replace('_', ' ')|title }}</td>
+                    <td>
+                        <span class="severity-badge severity-{{ alert.severity }}">{{ alert.severity|upper }}</span>
+                    </td>
+                    <td class="number">{{ alert.threshold_value|format_number }}</td>
+                    <td class="number">{{ alert.actual_value|format_number }}</td>
+                    <td>{{ alert.alert_time.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<div class="section">
+    <div class="section-header">
+        <h3>Histórico de Execuções</h3>
+        <span class="badge">Últimas {{ executions|length }} execuções</span>
+    </div>
+
+    {% if executions|length > 0 %}
+    <div class="chart-wrapper">
+        <canvas id="executionChart"></canvas>
+    </div>
+    {% else %}
+    <div class="empty-chart-msg">
+        Nenhum dado de execução disponível para exibir o gráfico.
+    </div>
+    {% endif %}
+
+    <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>CPU Time (ms)</th>
+                    <th>Duration (ms)</th>
+                    <th>Logical Reads</th>
+                    <th>Physical Reads</th>
+                    <th>Writes</th>
+                    <th>Data/Hora</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for exec in executions %}
+                <tr>
+                    <td class="number">{{ exec.cpu_time_ms|format_number }}</td>
+                    <td class="number">{{ exec.duration_ms|format_number }}</td>
+                    <td class="number">{{ exec.logical_reads|format_number }}</td>
+                    <td class="number">{{ exec.physical_reads|format_number }}</td>
+                    <td class="number">{{ exec.writes|format_number }}</td>
+                    <td>{{ exec.collected_at.strftime('%d/%m/%Y %H:%M:%S') if exec.collected_at else 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Verificar se há dados de execuções
+{% if executions|length > 0 %}
+try {
+    const executionData = [
+        {% for exec in executions|reverse %}
+        {
+            timestamp: '{{ exec.collected_at.strftime('%d/%m/%Y %H:%M:%S') if exec.collected_at else 'N/A' }}',
+            cpu_time: {{ (exec.cpu_time_ms | default(0)) | tojson }},
+            duration: {{ (exec.duration_ms | default(0)) | tojson }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    SQLMonitor.Dashboard.renderExecutionChart(executionData);
+} catch (error) {
+    console.error('Erro ao renderizar gráfico de execuções:', error);
+}
+{% else %}
+console.log('Nenhum dado de execução disponível para renderizar o gráfico');
+{% endif %}
+</script>
+{% endblock %}

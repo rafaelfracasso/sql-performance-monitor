@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ page_title }} - SQL Monitor{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css?v={{ range(1, 10000) | random }}">
+    <!-- Highlight.js Theme (VS Code Like) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/sql.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        // Init theme immediately to prevent flash
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="logo"><a href="/">SQL Monitor</a></h1>
+
+                <button class="hamburger-btn" id="hamburger-btn" aria-label="Menu" onclick="document.getElementById('mobile-nav').classList.toggle('open'); this.classList.toggle('active');">
+                    <span></span><span></span><span></span>
+                </button>
+
+                <nav class="nav" id="mobile-nav">
+                    <a href="/" class="nav-link {% if request.url.path == '/' %}active{% endif %}">Dashboard</a>
+                    <a href="/dashboard/queries" class="nav-link {% if 'queries' in request.url.path %}active{% endif %}">Queries</a>
+                    <a href="/dashboard/alerts" class="nav-link {% if 'alerts' in request.url.path %}active{% endif %}">Alertas</a>
+
+                    <div class="nav-dropdown">
+                        <a href="#" class="nav-link">Analise &#9662;</a>
+                        <div class="nav-dropdown-menu">
+                            <a href="/dashboard/applications">Aplicacoes</a>
+                            <a href="/dashboard/users">Usuarios</a>
+                            <a href="/dashboard/hosts">Hosts</a>
+                            <a href="/dashboard/trends">Tendencias</a>
+                            <a href="/dashboard/llm">Metricas LLM</a>
+                            <a href="/dashboard/duckdb">Status DuckDB</a>
+                        </div>
+                    </div>
+
+                    <a href="/dashboard/instances" class="nav-link {% if 'instances' in request.url.path %}active{% endif %}">Instancias</a>
+                    <a href="/plans" class="nav-link {% if 'plans' in request.url.path %}active{% endif %}">Planos</a>
+                    <a href="/settings" class="nav-link {% if 'settings' in request.url.path %}active{% endif %}">Configuracoes</a>
+
+                    <button id="theme-toggle" class="theme-toggle" aria-label="Alternar Tema">
+                        <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                        <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                    </button>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>SQL Monitor v1.0 - Database Performance Monitoring &amp; Optimization</p>
+        </footer>
+    </div>
+
+    <!-- Modal de Query Completa -->
+    <div id="queryModal" class="modal" style="display: none;">
+        <div class="modal-backdrop" onclick="closeQueryModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Query Completa</h3>
+                <button class="modal-close" onclick="closeQueryModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <button class="btn-copy" onclick="copyQueryToClipboard()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    Copiar
+                </button>
+                <pre id="modalQueryText" class="code-block" style="max-height: 60vh; overflow-y: auto;"><code></code></pre>
+            </div>
+            <div class="modal-footer">
+                <span id="modalQueryHash" class="text-muted"></span>
+                <button class="btn btn-secondary" onclick="closeQueryModal()">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Nav Overlay -->
+    <div id="nav-overlay" class="nav-overlay" onclick="document.getElementById('mobile-nav').classList.remove('open'); document.getElementById('hamburger-btn').classList.remove('active'); this.classList.remove('active');"></div>
+
+    <script src="/static/app.js?v={{ range(1, 10000) | random }}"></script>
+    <script>
+    // Sync overlay with mobile nav
+    (function() {
+        const btn = document.getElementById('hamburger-btn');
+        const nav = document.getElementById('mobile-nav');
+        const overlay = document.getElementById('nav-overlay');
+        if (btn && nav && overlay) {
+            btn.addEventListener('click', function() {
+                overlay.classList.toggle('active');
+            });
+        }
+    })();
+    </script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

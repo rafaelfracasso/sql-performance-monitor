@@ -1,0 +1,541 @@
+/* Settings Page Styles */
+
+:root {
+    --input-bg: #ffffff;
+    --hover-bg: rgba(0, 0, 0, 0.03);
+    --toggle-bg: #cbd5e1;
+    --toggle-bg-active: var(--primary-color);
+    --input-suffix-bg: #f1f5f9;
+    --input-suffix-color: #64748b;
+    --section-divider: var(--border-color);
+}
+
+[data-theme="dark"] {
+    --input-bg: #1e293b;
+    --hover-bg: rgba(255, 255, 255, 0.05);
+    --toggle-bg: #475569;
+    --toggle-bg-active: var(--primary-color);
+    --input-suffix-bg: #334155;
+    --input-suffix-color: #94a3b8;
+}
+
+/* ==================== TABS ==================== */
+
+.settings-tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--border-color);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+
+.settings-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.tab-btn {
+    padding: 0.6rem 1.1rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    white-space: nowrap;
+    border-radius: 6px 6px 0 0;
+}
+
+.tab-btn:hover {
+    color: var(--text-primary);
+    background: var(--hover-bg);
+}
+
+.tab-btn.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    background: var(--bg-primary);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+    animation: fadeInTab 0.25s ease-out;
+}
+
+@keyframes fadeInTab {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==================== ACCORDION ==================== */
+
+.accordion-item {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+
+.accordion-header {
+    padding: 1rem 1.5rem;
+    background: var(--card-bg);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s ease;
+    user-select: none;
+}
+
+.accordion-header:hover {
+    background: var(--hover-bg);
+}
+
+.accordion-header h4 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.accordion-icon {
+    transition: transform 0.3s ease;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s ease, padding 0.35s ease;
+    padding: 0 1.5rem;
+    background: var(--bg-primary);
+}
+
+.accordion-content.open {
+    max-height: 2000px;
+    padding: 1.5rem;
+}
+
+/* ==================== FORMS ==================== */
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.form-group label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.form-group small {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    line-height: 1.3;
+}
+
+.form-control {
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.form-control::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
+
+select.form-control {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2rem;
+}
+
+textarea.form-control {
+    font-family: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
+    font-size: 0.85rem;
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 0.75rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border-color);
+    margin-top: 0.5rem;
+}
+
+/* ==================== INPUT GROUP (suffix units) ==================== */
+
+.input-group {
+    display: flex;
+    align-items: stretch;
+}
+
+.input-group .form-control {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    flex: 1;
+    min-width: 0;
+}
+
+.input-suffix {
+    display: flex;
+    align-items: center;
+    padding: 0 0.65rem;
+    background: var(--input-suffix-bg);
+    color: var(--input-suffix-color);
+    border: 1px solid var(--border-color);
+    border-left: none;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+    user-select: none;
+}
+
+/* ==================== TOGGLE SWITCH ==================== */
+
+.toggle-switch {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.toggle-switch input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+
+.toggle-slider {
+    position: relative;
+    width: 40px;
+    height: 22px;
+    background: var(--toggle-bg);
+    border-radius: 11px;
+    transition: background 0.25s ease;
+    flex-shrink: 0;
+}
+
+.toggle-slider::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.25s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.toggle-switch input[type="checkbox"]:checked + .toggle-slider {
+    background: var(--toggle-bg-active);
+}
+
+.toggle-switch input[type="checkbox"]:checked + .toggle-slider::after {
+    transform: translateX(18px);
+}
+
+.toggle-switch input[type="checkbox"]:focus-visible + .toggle-slider {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+.toggle-switch span:last-child {
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+/* Legacy checkbox-label kept for compatibility */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+/* ==================== SETTINGS CARDS ==================== */
+
+.settings-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.settings-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-color: color-mix(in srgb, var(--border-color) 80%, var(--primary-color) 20%);
+}
+
+[data-theme="dark"] .settings-card:hover {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+}
+
+.settings-card-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.settings-card-header h4 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.settings-card-header .card-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+}
+
+.settings-card-body {
+    padding: 1.5rem;
+}
+
+/* ==================== ALERTS ==================== */
+
+.settings-alert {
+    padding: 0.85rem 1rem;
+    border-radius: 8px;
+    margin: 1rem 0;
+    border-left: 4px solid;
+    animation: slideIn 0.3s ease-out;
+    font-size: 0.9rem;
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.settings-alert-info {
+    background: rgba(37, 99, 235, 0.08);
+    border-left-color: var(--primary-color);
+    color: var(--text-primary);
+}
+
+.settings-alert-warning {
+    background: rgba(245, 158, 11, 0.08);
+    border-left-color: var(--warning-color);
+    color: var(--text-primary);
+}
+
+.settings-alert-success {
+    background: rgba(16, 185, 129, 0.08);
+    border-left-color: var(--success-color);
+    color: var(--text-primary);
+}
+
+.settings-alert-danger {
+    background: rgba(239, 68, 68, 0.08);
+    border-left-color: var(--error-color);
+    color: var(--text-primary);
+}
+
+/* ==================== EDIT ROW ==================== */
+
+.edit-row {
+    background: var(--bg-primary);
+}
+
+.edit-row form {
+    margin: 0;
+}
+
+/* ==================== FORM SECTION ==================== */
+
+.form-section {
+    background: var(--card-bg);
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.mt-4 {
+    margin-top: 2rem;
+}
+
+/* ==================== SECTION HEADINGS (inside forms) ==================== */
+
+.settings-card-body h4,
+.accordion-content h4 {
+    margin-top: 1.75rem;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.section-divider {
+    border: none;
+    border-top: 1px solid var(--section-divider);
+    margin: 1.75rem 0 0.25rem;
+}
+
+/* ==================== BADGES ==================== */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+.accordion-header .badge {
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--primary-color);
+    font-weight: 600;
+    padding: 0.15rem 0.55rem;
+    border-radius: 8px;
+    font-size: 0.72rem;
+    letter-spacing: 0.02em;
+}
+
+[data-theme="dark"] .accordion-header .badge {
+    background: rgba(96, 165, 250, 0.15);
+    color: #93bbfc;
+}
+
+.badge-success {
+    background: rgba(16, 185, 129, 0.12);
+    color: #059669;
+}
+
+[data-theme="dark"] .badge-success {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+}
+
+.badge-secondary {
+    background: rgba(100, 116, 139, 0.12);
+    color: #64748b;
+}
+
+[data-theme="dark"] .badge-secondary {
+    background: rgba(148, 163, 184, 0.15);
+    color: #94a3b8;
+}
+
+/* ==================== BUTTON ICONS ==================== */
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.btn-icon svg {
+    flex-shrink: 0;
+}
+
+/* ==================== BUTTON LOADING ==================== */
+
+.btn-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+.btn-loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    left: 50%;
+    margin-top: -8px;
+    margin-left: -8px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: btnSpin 0.6s linear infinite;
+}
+
+@keyframes btnSpin {
+    to { transform: rotate(360deg); }
+}
+
+/* ==================== RESPONSIVE ==================== */
+
+@media (max-width: 768px) {
+    .settings-tabs {
+        gap: 0;
+        padding-bottom: 0;
+    }
+
+    .tab-btn {
+        padding: 0.5rem 0.85rem;
+        font-size: 0.82rem;
+    }
+
+    .settings-card-body {
+        padding: 1rem;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .form-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

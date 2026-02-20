@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2>Top Usuarios Problematicos</h2>
+    <p class="subtitle">Logins que executam as queries mais pesadas</p>
+</div>
+
+<!-- Filtros -->
+<div class="filters-panel">
+    <form method="get" class="filters-form">
+        <div class="filters-main">
+            <div class="filter-chips">
+                <label for="period">Periodo:</label>
+                <select name="period" id="period" onchange="this.form.submit()" class="chip-select">
+                    <option value="24h" {% if period == '24h' %}selected{% endif %}>24 horas</option>
+                    <option value="7d" {% if period == '7d' %}selected{% endif %}>7 dias</option>
+                    <option value="30d" {% if period == '30d' %}selected{% endif %}>30 dias</option>
+                </select>
+            </div>
+            <div class="filter-chips">
+                <label for="instance">Instancia:</label>
+                <select name="instance" id="instance" onchange="this.form.submit()" class="chip-select">
+                    <option value="">Todas</option>
+                    {% for inst in instance_filter %}
+                    <option value="{{ inst }}" {% if instance == inst %}selected{% endif %}>{{ inst }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Summary Cards -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--primary-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ users|length }}</div>
+                <div class="metric-label">Total de Usuarios</div>
+            </div>
+        </div>
+    </div>
+    <div class="metric-card metric-warning">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--warning-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ users|sum(attribute='total_occurrences')|format_number }}</div>
+                <div class="metric-label">Total de Ocorrencias</div>
+            </div>
+        </div>
+    </div>
+    <div class="metric-card">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--secondary-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">
+                    {% if users %}{{ "%.0f"|format(users|map(attribute='avg_cpu_time_ms')|list|sum / users|length) }}{% else %}0{% endif %} ms
+                </div>
+                <div class="metric-label">CPU Medio Geral</div>
+            </div>
+        </div>
+    </div>
+    <div class="metric-card metric-error">
+        <div style="display:flex; align-items:flex-start; gap:1rem;">
+            <div style="color:var(--error-color); flex-shrink:0; margin-top:0.25rem;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div>
+                <div class="metric-value">{{ users|sum(attribute='critical_alerts') }}</div>
+                <div class="metric-label">Alertas Criticos</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Graficos -->
+{% if users %}
+<div class="charts-grid">
+    <div class="section">
+        <h4>Top 10 por Volume de Queries</h4>
+        <div class="chart-wrapper">
+            <canvas id="usersBarChart"></canvas>
+        </div>
+    </div>
+    <div class="section">
+        <h4>Distribuicao por Alertas</h4>
+        <div class="chart-wrapper">
+            <canvas id="usersDoughnutChart"></canvas>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="section">
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Usuario</th>
+                    <th class="number">Queries Unicas</th>
+                    <th class="number">Ocorrencias</th>
+                    <th class="number">CPU Medio (ms)</th>
+                    <th class="number">CPU Maximo (ms)</th>
+                    <th class="number">Alertas Criticos</th>
+                    <th>Acoes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr {% if user.critical_alerts > 0 %}style="background-color: rgba(239, 68, 68, 0.05);"{% endif %}>
+                    <td><strong>{{ user.login_name }}</strong></td>
+                    <td class="number">{{ user.unique_queries|format_number }}</td>
+                    <td class="number">{{ user.total_occurrences|format_number }}</td>
+                    <td class="number">{{ user.avg_cpu_time_ms|format_number }}</td>
+                    <td class="number">{{ user.max_cpu_time_ms|format_number }}</td>
+                    <td class="number">
+                        {% if user.critical_alerts > 0 %}
+                        <span class="badge badge-error">{{ user.critical_alerts }}</span>
+                        {% else %}
+                        0
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="/dashboard/queries?login_name={{ user.login_name }}" class="btn btn-sm btn-primary">Ver Queries</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% if users %}
+<script>
+(function() {
+    const users = {{ users|tojson }};
+    const top10 = users.slice(0, 10);
+
+    // Bar chart - Top 10 by query volume
+    SQLMonitor.ChartFactory.createBar('usersBarChart', {
+        data: {
+            labels: top10.map(u => u.login_name.substring(0, 20)),
+            datasets: [{
+                label: 'Ocorrencias',
+                data: top10.map(u => u.total_occurrences),
+                backgroundColor: 'rgba(37, 99, 235, 0.7)',
+                borderColor: 'rgb(37, 99, 235)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: { x: { grid: { color: 'rgba(75, 85, 99, 0.1)' } }, y: { grid: { display: false } } }
+        }
+    });
+
+    // Doughnut chart - by severity
+    const withCritical = users.filter(u => u.critical_alerts > 0).length;
+    const withoutCritical = users.length - withCritical;
+    SQLMonitor.ChartFactory.createDoughnut('usersDoughnutChart', {
+        data: {
+            labels: ['Com Alertas Criticos', 'Sem Alertas Criticos'],
+            datasets: [{
+                data: [withCritical, withoutCritical],
+                backgroundColor: [SQLMonitor.ChartFactory.colors.error, SQLMonitor.ChartFactory.colors.success],
+                borderWidth: 0
+            }]
+        },
+        options: { plugins: { legend: { position: 'right' } } }
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

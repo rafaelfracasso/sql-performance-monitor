@@ -1,0 +1,66 @@
+# Environment variables
+.env
+
+# AI Factory
+.ai-factory/
+.ai-factory.json
+.mcp.json
+
+# Database credentials (NUNCA commite este arquivo!)
+config/databases.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.venv/
+.claude/
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# Logs
+logs/
+*.log
+
+# Weekly Optimizer data
+sql_monitor_data/
+
+# DuckDB
+*.duckdb
+*.duckdb.wal
+
+# Cache
+*.cache
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

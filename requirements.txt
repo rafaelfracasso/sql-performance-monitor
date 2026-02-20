@@ -1,0 +1,33 @@
+# Database Connections
+pyodbc>=5.0.0              # SQL Server
+psycopg2-binary>=2.9.0     # PostgreSQL
+hdbcli>=2.19.0             # SAP HANA
+
+# LLM Integration
+google-genai>=0.1.0
+
+# SQL Parsing and Analysis
+sqlparse>=0.4.4
+
+# Configuration Management
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+
+# Task Scheduling
+schedule>=1.2.0
+
+# HTTP Requests (Teams integration)
+requests>=2.31.0
+
+# Logging and Utilities
+typing-extensions>=4.8.0
+
+# Observability and Metrics
+duckdb>=0.9.0              # Embedded analytical database for metrics
+
+# Web API and Dashboard
+fastapi>=0.104.0           # REST API framework
+uvicorn[standard]>=0.24.0  # ASGI server
+jinja2>=3.1.0              # Template engine
+python-multipart>=0.0.6    # Form data parsing

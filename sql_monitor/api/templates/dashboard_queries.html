@@ -1,0 +1,397 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <div>
+            <h2>{% if view_mode == 'chronological' %}Capturas Cronologicas{% else %}Top Queries Problematicas{% endif %}</h2>
+            <p class="subtitle">{% if view_mode == 'chronological' %}Historico de capturas ordenado por data{% else %}Analise de queries com pior performance{% endif %}</p>
+        </div>
+        <div class="header-actions">
+            {% if view_mode == 'top' %}
+            <button onclick="analyzeSelected()" class="btn btn-primary" id="btnBulkAnalyze" disabled>
+                Analisar com IA (<span id="selectedCount">0</span>)
+            </button>
+            <a href="/api/queries/export?period={{ period }}&metric={{ metric }}{% if instance %}&instance={{ instance }}{% endif %}{% if database %}&database={{ database }}{% endif %}{% if severity %}&severity={{ severity }}{% endif %}"
+               class="btn btn-secondary" download>
+                Exportar CSV
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Toggle de Visualizacao -->
+<div class="view-toggle-container">
+    <div class="view-toggle">
+        <a href="?view_mode=top&period={{ period }}&metric={{ metric }}{% if instance %}&instance={{ instance }}{% endif %}{% if database %}&database={{ database }}{% endif %}{% if login_name %}&login_name={{ login_name }}{% endif %}{% if host_name %}&host_name={{ host_name }}{% endif %}{% if program_name %}&program_name={{ program_name }}{% endif %}{% if severity %}&severity={{ severity }}{% endif %}{% if search %}&search={{ search }}{% endif %}"
+           class="toggle-btn {% if view_mode == 'top' %}active{% endif %}">
+            Top Queries
+        </a>
+        <a href="?view_mode=chronological&period={{ period }}{% if instance %}&instance={{ instance }}{% endif %}{% if database %}&database={{ database }}{% endif %}{% if login_name %}&login_name={{ login_name }}{% endif %}{% if host_name %}&host_name={{ host_name }}{% endif %}{% if program_name %}&program_name={{ program_name }}{% endif %}{% if search %}&search={{ search }}{% endif %}"
+           class="toggle-btn {% if view_mode == 'chronological' %}active{% endif %}">
+            Cronologico
+        </a>
+    </div>
+</div>
+
+<!-- Filtros Redesenhados -->
+<div class="filters-panel">
+    <form method="get" action="/dashboard/queries" id="filtersForm">
+        <!-- Campo hidden para manter view_mode -->
+        <input type="hidden" name="view_mode" value="{{ view_mode }}">
+
+        <!-- Linha Principal: Busca + Filtros essenciais -->
+        <div class="filters-main">
+            <div class="search-box">
+                <input type="text" name="search" id="search" value="{{ search or '' }}"
+                       placeholder="Buscar na query...">
+                <button type="submit" class="search-btn" title="Buscar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="filter-chips">
+                <select name="period" id="period" onchange="this.form.submit()" class="chip-select">
+                    <option value="24h" {% if period == '24h' %}selected{% endif %}>24h</option>
+                    <option value="7d" {% if period == '7d' %}selected{% endif %}>7 dias</option>
+                    <option value="30d" {% if period == '30d' %}selected{% endif %}>30 dias</option>
+                </select>
+
+                {% if view_mode == 'top' %}
+                <select name="metric" id="metric" onchange="this.form.submit()" class="chip-select">
+                    <option value="cpu_time_ms" {% if metric == 'cpu_time_ms' %}selected{% endif %}>CPU (avg)</option>
+                    <option value="duration_ms" {% if metric == 'duration_ms' %}selected{% endif %}>Duration (avg)</option>
+                    <option value="total_cpu_impact" {% if metric == 'total_cpu_impact' %}selected{% endif %}>Impacto Total CPU</option>
+                    <option value="total_duration_impact" {% if metric == 'total_duration_impact' %}selected{% endif %}>Impacto Total Duration</option>
+                    <option value="logical_reads" {% if metric == 'logical_reads' %}selected{% endif %}>Reads</option>
+                    <option value="physical_reads" {% if metric == 'physical_reads' %}selected{% endif %}>Phys Reads</option>
+                    <option value="writes" {% if metric == 'writes' %}selected{% endif %}>Writes</option>
+                    <option value="wait_time_ms" {% if metric == 'wait_time_ms' %}selected{% endif %}>Wait</option>
+                    <option value="memory_mb" {% if metric == 'memory_mb' %}selected{% endif %}>Memory</option>
+                </select>
+
+                <select name="severity" id="severity" onchange="this.form.submit()" class="chip-select {% if severity %}chip-active{% endif %}">
+                    <option value="">Severidade</option>
+                    <option value="critical" {% if severity == 'critical' %}selected{% endif %}>Critical</option>
+                    <option value="high" {% if severity == 'high' %}selected{% endif %}>High</option>
+                    <option value="medium" {% if severity == 'medium' %}selected{% endif %}>Medium</option>
+                    <option value="low" {% if severity == 'low' %}selected{% endif %}>Low</option>
+                </select>
+                {% endif %}
+
+                <button type="button" class="chip-btn {% if instance or database or login_name or host_name or program_name %}chip-active{% endif %}" onclick="toggleAdvancedFilters()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                    </svg>
+                    Filtros
+                    {% if instance or database or login_name or host_name or program_name %}
+                    <span class="filter-count">{{ [instance, database, login_name, host_name, program_name]|select|list|length }}</span>
+                    {% endif %}
+                </button>
+
+                {% if search or severity or instance or database or login_name or host_name or program_name %}
+                <a href="/dashboard/queries?view_mode={{ view_mode }}&period={{ period }}&metric={{ metric }}" class="chip-btn chip-clear" title="Limpar filtros">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Filtros Avançados (ocultos por padrão) -->
+        <div class="filters-advanced {% if instance or database or login_name or host_name or program_name %}show{% endif %}" id="advancedFilters">
+            <div class="advanced-grid">
+                <div class="adv-filter">
+                    <label>Instância</label>
+                    <select name="instance" id="instance" onchange="this.form.submit()">
+                        <option value="">Todas</option>
+                        {% for inst in instance_filter %}
+                        <option value="{{ inst }}" {% if instance == inst %}selected{% endif %}>{{ inst }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="adv-filter">
+                    <label>Database</label>
+                    <select name="database" id="database" onchange="this.form.submit()">
+                        <option value="">Todos</option>
+                        {% for db in database_filter %}
+                        <option value="{{ db }}" {% if database == db %}selected{% endif %}>{{ db }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="adv-filter">
+                    <label>Usuário</label>
+                    <select name="login_name" id="login_name" onchange="this.form.submit()">
+                        <option value="">Todos</option>
+                        {% for login in login_filter %}
+                        <option value="{{ login }}" {% if login_name == login %}selected{% endif %}>{{ login }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="adv-filter">
+                    <label>Host</label>
+                    <select name="host_name" id="host_name" onchange="this.form.submit()">
+                        <option value="">Todos</option>
+                        {% for host in host_filter %}
+                        <option value="{{ host }}" {% if host_name == host %}selected{% endif %}>{{ host }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="adv-filter">
+                    <label>Aplicação</label>
+                    <select name="program_name" id="program_name" onchange="this.form.submit()">
+                        <option value="">Todas</option>
+                        {% for program in program_filter %}
+                        <option value="{{ program }}" {% if program_name == program %}selected{% endif %}>{{ program[:40] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Tabela de Queries -->
+<div class="section">
+    <div class="section-header">
+        <h3>{% if view_mode == 'chronological' %}Capturas Recentes{% else %}Queries - {{ metric|replace('_', ' ')|title }}{% endif %}</h3>
+        <span class="badge">{{ total_queries }} total | Pagina {{ page }}/{{ total_pages }}</span>
+    </div>
+
+    {% if queries %}
+    <div class="table-container">
+        <table class="data-table queries-table">
+            <thead>
+                <tr>
+                    {% if view_mode == 'top' %}
+                    <th style="width: 30px;"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
+                    <th class="col-trend">Trend</th>
+                    {% endif %}
+                    <th>Instancia</th>
+                    <th>Database</th>
+                    <th>Query</th>
+                    <th class="col-number">CPU (ms)</th>
+                    <th class="col-number">Duration (ms)</th>
+                    {% if metric and metric.startswith('total_') %}
+                    <th class="col-number">Impact CPU</th>
+                    <th class="col-number">Impact Dur</th>
+                    {% endif %}
+                    <th class="col-number db-specific sqlserver">Reads</th>
+                    <th class="col-number db-specific sqlserver">Wait (ms)</th>
+                    <th class="col-number db-specific sqlserver">Mem (MB)</th>
+                    {% if view_mode == 'top' %}
+                    <th class="col-number">Exec</th>
+                    <th>Ultima</th>
+                    <th>Sev</th>
+                    {% else %}
+                    <th>Capturado em</th>
+                    {% endif %}
+                    <th>Acoes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for query in queries %}
+                <tr data-db-type="{{ query.db_type }}" data-query-hash="{{ query.query_hash }}">
+                    {% if view_mode == 'top' %}
+                    <td><input type="checkbox" class="query-checkbox" value="{{ query.query_hash }}" onclick="updateBulkButton()"></td>
+                    <td class="col-trend">
+                        {% if query.trend == 'worsening' %}
+                        <span class="trend-badge trend-worsening" title="Piorando {{ query.trend_pct|default(0) }}%">&#9650;{{ query.trend_pct|default(0)|abs|int }}%</span>
+                        {% elif query.trend == 'improving' %}
+                        <span class="trend-badge trend-improving" title="Melhorando {{ query.trend_pct|default(0)|abs }}%">&#9660;{{ query.trend_pct|default(0)|abs|int }}%</span>
+                        {% elif query.trend == 'new' %}
+                        <span class="trend-badge trend-new" title="Nova">NEW</span>
+                        {% else %}
+                        <span class="trend-badge trend-stable" title="Estavel">&#8212;</span>
+                        {% endif %}
+                        {% if query.baseline_multiplier and query.baseline_multiplier > 1.5 %}
+                        <span class="baseline-badge" title="Desvio de {{ query.baseline_deviation_pct|default(0)|int }}% da baseline ({{ query.baseline_samples|default(0) }} amostras)">{{ query.baseline_multiplier }}x</span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                    <td title="{{ query.instance_name }}">{{ query.instance_name[:15] }}</td>
+                    <td title="{{ query.database_name or 'N/A' }}">{{ (query.database_name or 'N/A')[:12] }}</td>
+                    <td class="query-preview">
+                        <button class="btn-view-query" onclick="openQueryModal('{{ query.query_hash }}')">Ver</button>
+                        <span title="{{ query.query_preview }}">{{ query.query_preview[:50] }}...</span>
+                    </td>
+                    {% if view_mode == 'top' %}
+                    <td class="number">{{ query.avg_cpu_time_ms|format_number }}</td>
+                    <td class="number">{{ query.avg_duration_ms|format_number }}</td>
+                    {% if metric and metric.startswith('total_') %}
+                    <td class="number"><strong>{{ query.total_cpu_impact|format_number }}</strong></td>
+                    <td class="number"><strong>{{ query.total_duration_impact|format_number }}</strong></td>
+                    {% endif %}
+                    <td class="number db-specific sqlserver">{{ query.avg_logical_reads|format_number }}</td>
+                    <td class="number db-specific sqlserver">{{ query.avg_wait_time_ms|format_number }}</td>
+                    <td class="number db-specific sqlserver">{{ query.avg_memory_mb|format_number }}</td>
+                    <td class="number">{{ query.occurrences|format_number }}</td>
+                    <td class="datetime" title="{{ query.last_seen }}">
+                        {{ query.last_seen.strftime('%d/%m %H:%M') if query.last_seen else 'N/A' }}
+                    </td>
+                    <td>
+                        <span class="severity-badge severity-{{ (query.severity or 'medium')|lower }}">
+                            {{ (query.severity or 'M')[0]|upper }}
+                        </span>
+                    </td>
+                    {% else %}
+                    <td class="number">{{ query.cpu_time_ms|format_number }}</td>
+                    <td class="number">{{ query.duration_ms|format_number }}</td>
+                    <td class="number db-specific sqlserver">{{ query.logical_reads|format_number }}</td>
+                    <td class="number db-specific sqlserver">{{ query.wait_time_ms|format_number }}</td>
+                    <td class="number db-specific sqlserver">{{ query.memory_mb|format_number }}</td>
+                    <td class="datetime" title="{{ query.collected_at }}">
+                        {{ query.collected_at.strftime('%d/%m %H:%M:%S') if query.collected_at else 'N/A' }}
+                    </td>
+                    {% endif %}
+                    <td>
+                        <a href="/dashboard/queries/{{ query.query_hash }}" class="btn btn-sm btn-primary">+</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginacao -->
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if page > 1 %}
+        <a href="?page={{ page - 1 }}&view_mode={{ view_mode }}&period={{ period }}&metric={{ metric }}{% if instance %}&instance={{ instance }}{% endif %}{% if database %}&database={{ database }}{% endif %}{% if login_name %}&login_name={{ login_name }}{% endif %}{% if host_name %}&host_name={{ host_name }}{% endif %}{% if program_name %}&program_name={{ program_name }}{% endif %}{% if severity %}&severity={{ severity }}{% endif %}{% if search %}&search={{ search }}{% endif %}"
+           class="btn btn-sm btn-secondary">Anterior</a>
+        {% endif %}
+
+        <span class="pagination-info">
+            Pagina {{ page }} de {{ total_pages }}
+        </span>
+
+        {% if has_more %}
+        <a href="?page={{ page + 1 }}&view_mode={{ view_mode }}&period={{ period }}&metric={{ metric }}{% if instance %}&instance={{ instance }}{% endif %}{% if database %}&database={{ database }}{% endif %}{% if login_name %}&login_name={{ login_name }}{% endif %}{% if host_name %}&host_name={{ host_name }}{% endif %}{% if program_name %}&program_name={{ program_name }}{% endif %}{% if severity %}&severity={{ severity }}{% endif %}{% if search %}&search={{ search }}{% endif %}"
+           class="btn btn-sm btn-secondary">Proxima</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <p class="empty-message">Nenhuma query encontrada para os filtros selecionados.</p>
+    {% endif %}
+</div>
+
+<!-- Resumo Estatistico -->
+{% if queries %}
+<div class="section">
+    <h3>Resumo Estatistico</h3>
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div style="display:flex; align-items:flex-start; gap:1rem;">
+                <div style="color:var(--primary-color); flex-shrink:0; margin-top:0.25rem;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                </div>
+                <div>
+                    <div class="metric-value">{{ total_queries }}</div>
+                    <div class="metric-label">{% if view_mode == 'chronological' %}Capturas Encontradas{% else %}Queries Encontradas{% endif %}</div>
+                </div>
+            </div>
+        </div>
+
+        {% if view_mode == 'top' %}
+        <div class="metric-card">
+            <div style="display:flex; align-items:flex-start; gap:1rem;">
+                <div style="color:var(--warning-color); flex-shrink:0; margin-top:0.25rem;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                </div>
+                <div>
+                    <div class="metric-value">{{ queries|sum(attribute='occurrences') }}</div>
+                    <div class="metric-label">Ocorrencias (pagina)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div style="display:flex; align-items:flex-start; gap:1rem;">
+                <div style="color:#8b5cf6; flex-shrink:0; margin-top:0.25rem;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z"/></svg>
+                </div>
+                <div>
+                    <div class="metric-value">{{ queries|selectattr('has_analysis')|list|length }}</div>
+                    <div class="metric-label">Com Analise LLM</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div style="display:flex; align-items:flex-start; gap:1rem;">
+                <div style="color:var(--error-color); flex-shrink:0; margin-top:0.25rem;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                </div>
+                <div>
+                    <div class="metric-value">{{ queries|selectattr('trend', 'equalto', 'worsening')|list|length }}</div>
+                    <div class="metric-label">Piorando</div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="metric-card">
+            <div style="display:flex; align-items:flex-start; gap:1rem;">
+                <div style="color:var(--success-color); flex-shrink:0; margin-top:0.25rem;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg>
+                </div>
+                <div>
+                    <div class="metric-value">{{ queries|map(attribute='query_hash')|unique|list|length }}</div>
+                    <div class="metric-label">Queries Unicas (pagina)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div style="display:flex; align-items:flex-start; gap:1rem;">
+                <div style="color:var(--error-color); flex-shrink:0; margin-top:0.25rem;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
+                </div>
+                <div>
+                    <div class="metric-value">{{ "%.0f"|format(queries|sum(attribute='cpu_time_ms')) }}</div>
+                    <div class="metric-label">CPU Total (ms)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div style="display:flex; align-items:flex-start; gap:1rem;">
+                <div style="color:var(--warning-color); flex-shrink:0; margin-top:0.25rem;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div>
+                    <div class="metric-value">{{ "%.0f"|format(queries|sum(attribute='duration_ms')) }}</div>
+                    <div class="metric-label">Duration Total (ms)</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_head %}
+<!-- Styles in style.css -->
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Submit form on Enter in search field
+document.getElementById('search')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        document.getElementById('filtersForm').submit();
+    }
+});
+</script>
+{% endblock %}

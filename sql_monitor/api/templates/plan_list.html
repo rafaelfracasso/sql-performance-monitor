@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-flex">
+        <div>
+            <h2>Sugestoes de Otimizacao</h2>
+            <p class="subtitle">Relatorios tecnicos gerados pela IA baseado no historico de performance</p>
+        </div>
+        <button data-action="generate-plan" onclick="generatePlan()" class="btn btn-primary">
+            Gerar Nova Analise
+        </button>
+    </div>
+</div>
+
+{% if plans_with_risk %}
+<div class="plans-grid">
+    {% for item in plans_with_risk %}
+    {% set plan = item.plan %}
+    {% set risk_counts = item.risk_counts %}
+    {% set metadata = plan.metadata if plan.metadata is mapping else {} %}
+    {% set instances = metadata.get('instances_analyzed', []) if metadata else [] %}
+    <div class="plan-card">
+        <div class="plan-card-header">
+            <div class="plan-card-id">
+                <code>{{ plan.plan_id }}</code>
+                <span class="badge badge-{{ plan.status or 'pending' }}">{{ (plan.status or 'pending')|upper }}</span>
+            </div>
+            <span class="plan-card-date">{{ plan.generated_at.strftime('%d/%m/%Y %H:%M') }}</span>
+        </div>
+
+        <div class="plan-card-body">
+            <div class="plan-card-stats">
+                <div class="plan-stat">
+                    <span class="plan-stat-value">{{ plan.total_optimizations }}</span>
+                    <span class="plan-stat-label">Sugestoes</span>
+                </div>
+                <div class="plan-stat">
+                    <span class="plan-stat-value">{{ plan.analysis_period_days }}d</span>
+                    <span class="plan-stat-label">Periodo</span>
+                </div>
+                {% if instances %}
+                <div class="plan-stat">
+                    <span class="plan-stat-value">{{ instances|length }}</span>
+                    <span class="plan-stat-label">Instancias</span>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if plan.total_optimizations > 0 %}
+            <div class="plan-risk-summary">
+                {% if risk_counts.critical > 0 %}
+                <span class="risk-counter risk-critical">{{ risk_counts.critical }} critical</span>
+                {% endif %}
+                {% if risk_counts.high > 0 %}
+                <span class="risk-counter risk-high">{{ risk_counts.high }} high</span>
+                {% endif %}
+                {% if risk_counts.medium > 0 %}
+                <span class="risk-counter risk-medium">{{ risk_counts.medium }} medium</span>
+                {% endif %}
+                {% if risk_counts.low > 0 %}
+                <span class="risk-counter risk-low">{{ risk_counts.low }} low</span>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if instances %}
+            <div class="plan-instances">
+                {% for inst in instances[:3] %}
+                <span class="instance-tag">{{ inst }}</span>
+                {% endfor %}
+                {% if instances|length > 3 %}
+                <span class="instance-tag instance-more">+{{ instances|length - 3 }}</span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="plan-card-actions">
+            <a href="/plans/{{ plan.plan_id }}" class="btn btn-sm btn-primary">Ver Detalhes</a>
+            <button onclick="deletePlan('{{ plan.plan_id }}')" class="btn btn-sm btn-danger">Deletar</button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <p class="empty-message">Nenhum relatorio de otimizacao disponivel.</p>
+    <p>Use o botao acima para gerar uma nova analise baseada no historico atual.</p>
+</div>
+{% endif %}
+
+<div class="section info-section">
+    <h3>Como Funciona</h3>
+    <div class="info-grid">
+        <div class="info-card">
+            <div class="info-icon">1</div>
+            <div class="info-content">
+                <h4>Monitoramento</h4>
+                <p>O sistema coleta metricas de performance continuamente e armazena no banco de dados analitico.</p>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <div class="info-icon">2</div>
+            <div class="info-content">
+                <h4>Analise IA</h4>
+                <p>A inteligencia artificial analisa os padroes de lentidao, missing indexes e estatisticas para sugerir melhorias.</p>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <div class="info-icon">3</div>
+            <div class="info-content">
+                <h4>Recomendacao</h4>
+                <p>As sugestoes sao apresentadas como scripts prontos para revisao e execucao manual pelo DBA.</p>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <div class="info-icon">4</div>
+            <div class="info-content">
+                <h4>Rastreabilidade</h4>
+                <p>Cada sugestao e vinculada as queries e alertas originais, fornecendo evidencias tecnicas para a mudanca.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Functions in app.js -->
+{% endblock %}

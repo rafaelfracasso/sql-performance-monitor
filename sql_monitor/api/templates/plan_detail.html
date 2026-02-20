@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-flex">
+        <div>
+            <h2>Relatorio: {{ plan_id }}</h2>
+            <p class="subtitle">Sugestoes tecnicas baseadas na analise de performance</p>
+        </div>
+        <a href="/plans" class="btn btn-secondary">Voltar</a>
+    </div>
+</div>
+
+{% if plan %}
+{% set metadata = plan.metadata if plan.metadata is mapping else {} %}
+{% set instances = metadata.get('instances_analyzed', []) if metadata else [] %}
+
+<!-- Resumo do Relatorio -->
+<div class="plan-summary-grid">
+    <div class="summary-card">
+        <span class="summary-value">{{ plan.total_optimizations }}</span>
+        <span class="summary-label">Total Sugestoes</span>
+    </div>
+    <div class="summary-card">
+        <span class="summary-value">{{ plan.analysis_period_days }}d</span>
+        <span class="summary-label">Periodo Analisado</span>
+    </div>
+    <div class="summary-card">
+        <span class="summary-value">{{ plan.generated_at.strftime('%d/%m/%Y %H:%M') }}</span>
+        <span class="summary-label">Gerado em</span>
+    </div>
+    {% if instances %}
+    <div class="summary-card">
+        <span class="summary-value">{{ instances|length }}</span>
+        <span class="summary-label">Instancias</span>
+    </div>
+    {% endif %}
+</div>
+
+{% if instances %}
+<div class="plan-instances-bar">
+    <span class="instances-label">Instancias analisadas:</span>
+    {% for inst in instances %}
+    <span class="instance-tag">{{ inst }}</span>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Risk summary badges -->
+{% if plan.optimizations %}
+{% set ns = namespace(low=0, medium=0, high=0, critical=0) %}
+{% for opt in plan.optimizations %}
+    {% if opt.risk_level == 'low' %}{% set ns.low = ns.low + 1 %}
+    {% elif opt.risk_level == 'medium' %}{% set ns.medium = ns.medium + 1 %}
+    {% elif opt.risk_level == 'high' %}{% set ns.high = ns.high + 1 %}
+    {% elif opt.risk_level == 'critical' %}{% set ns.critical = ns.critical + 1 %}
+    {% endif %}
+{% endfor %}
+<div class="plan-risk-bar">
+    {% if ns.critical > 0 %}<span class="risk-counter risk-critical">{{ ns.critical }} critical</span>{% endif %}
+    {% if ns.high > 0 %}<span class="risk-counter risk-high">{{ ns.high }} high</span>{% endif %}
+    {% if ns.medium > 0 %}<span class="risk-counter risk-medium">{{ ns.medium }} medium</span>{% endif %}
+    {% if ns.low > 0 %}<span class="risk-counter risk-low">{{ ns.low }} low</span>{% endif %}
+</div>
+{% endif %}
+
+<!-- Lista de Sugestoes -->
+<div class="section">
+    <div class="section-header">
+        <h3>Sugestoes Planejadas</h3>
+        <div class="filter-tabs">
+            <button class="tab active" onclick="filterOptimizations('all')">Todas</button>
+            <button class="tab" onclick="filterOptimizations('low')">LOW</button>
+            <button class="tab" onclick="filterOptimizations('medium')">MEDIUM</button>
+            <button class="tab" onclick="filterOptimizations('high')">HIGH</button>
+            <button class="tab" onclick="filterOptimizations('critical')">CRITICAL</button>
+        </div>
+    </div>
+
+    <div class="optimizations-list">
+        {% for opt in plan.optimizations %}
+        {% set meta = opt.metadata if opt.metadata is mapping else {} %}
+        <div class="optimization-card risk-{{ opt.risk_level }}" data-risk="{{ opt.risk_level }}">
+            <div class="optimization-header">
+                <div class="optimization-title">
+                    <h4>{{ opt.description }}</h4>
+                </div>
+                <div class="optimization-badges">
+                    <span class="badge badge-type-{{ opt.type }}">{{ opt.type|replace('_', ' ')|upper }}</span>
+                    <span class="badge badge-priority-{{ opt.priority }}">{{ opt.priority|upper }}</span>
+                    <span class="badge badge-risk-{{ opt.risk_level }}">RISK: {{ opt.risk_level|upper }}</span>
+                </div>
+            </div>
+
+            <div class="optimization-body">
+                <!-- Contexto: instancia, banco, schema.tabela -->
+                <div class="opt-context">
+                    {% if meta.get('instance_name') %}
+                    <div class="ctx-item">
+                        <span class="ctx-label">Instancia</span>
+                        <span class="ctx-value">{{ meta.instance_name }}</span>
+                    </div>
+                    {% endif %}
+                    {% if meta.get('db_type') %}
+                    <div class="ctx-item">
+                        <span class="ctx-label">Tipo</span>
+                        <span class="ctx-value badge badge-{{ meta.db_type }}">{{ meta.db_type|upper }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="ctx-item">
+                        <span class="ctx-label">Tabela</span>
+                        <span class="ctx-value"><code>{{ opt.table }}</code></span>
+                    </div>
+                    {% if meta.get('query_hash') %}
+                    <div class="ctx-item">
+                        <span class="ctx-label">Query</span>
+                        <span class="ctx-value">
+                            <a href="/dashboard/queries/{{ meta.query_hash }}" target="_blank" class="ref-link">
+                                {{ meta.query_hash[:12] }}...
+                            </a>
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Metricas -->
+                {% if meta.get('avg_duration_ms') or meta.get('avg_cpu_ms') or meta.get('avg_logical_reads') or meta.get('occurrences') %}
+                <div class="opt-metrics">
+                    {% if meta.get('avg_duration_ms') %}
+                    <div class="metric-item">
+                        <span class="metric-value">{{ "%.0f"|format(meta.avg_duration_ms) }}ms</span>
+                        <span class="metric-label">Duracao Media</span>
+                    </div>
+                    {% endif %}
+                    {% if meta.get('avg_cpu_ms') %}
+                    <div class="metric-item">
+                        <span class="metric-value">{{ "%.0f"|format(meta.avg_cpu_ms) }}ms</span>
+                        <span class="metric-label">CPU Media</span>
+                    </div>
+                    {% endif %}
+                    {% if meta.get('avg_logical_reads') %}
+                    <div class="metric-item">
+                        <span class="metric-value">{{ "%.0f"|format(meta.avg_logical_reads) }}</span>
+                        <span class="metric-label">Leituras Logicas</span>
+                    </div>
+                    {% endif %}
+                    {% if meta.get('occurrences') %}
+                    <div class="metric-item">
+                        <span class="metric-value">{{ meta.occurrences }}</span>
+                        <span class="metric-label">Ocorrencias/Semana</span>
+                    </div>
+                    {% endif %}
+                    {% if meta.get('estimated_improvement_percent') %}
+                    <div class="metric-item metric-highlight">
+                        <span class="metric-value">~{{ meta.estimated_improvement_percent }}%</span>
+                        <span class="metric-label">Melhoria Estimada</span>
+                    </div>
+                    {% endif %}
+                    {% if meta.get('estimated_time_saved_hours') %}
+                    <div class="metric-item metric-highlight">
+                        <span class="metric-value">{{ meta.estimated_time_saved_hours }}h</span>
+                        <span class="metric-label">Tempo Economizado</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Recomendacoes LLM -->
+                {% if meta.get('llm_recommendations') %}
+                <div class="opt-recommendations">
+                    <div class="rec-header">Recomendacoes da IA</div>
+                    <div class="rec-body markdown-content">{{ meta.llm_recommendations }}</div>
+                </div>
+                {% endif %}
+
+                {% if meta.get('llm_analysis') %}
+                <div class="opt-recommendations opt-analysis">
+                    <div class="rec-header">Analise Detalhada</div>
+                    <div class="rec-body markdown-content">{{ meta.llm_analysis }}</div>
+                </div>
+                {% endif %}
+
+                <!-- SQL Script -->
+                <div class="optimization-sql">
+                    <div class="sql-header">
+                        <strong>Script SQL sugerido:</strong>
+                        <button onclick="copySQL('{{ opt.id }}')" class="btn btn-sm btn-secondary">Copiar</button>
+                    </div>
+                    <pre id="sql-{{ opt.id }}"><code>{{ opt.sql_script }}</code></pre>
+                </div>
+
+                {% if opt.rollback_script %}
+                <div class="optimization-sql">
+                    <div class="sql-header">
+                        <strong>Script de Rollback (reverter):</strong>
+                        <button onclick="copySQL('rollback-{{ opt.id }}')" class="btn btn-sm btn-secondary">Copiar</button>
+                    </div>
+                    <pre id="sql-rollback-{{ opt.id }}"><code>{{ opt.rollback_script }}</code></pre>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% else %}
+<div class="empty-state">
+    <p class="empty-message">Relatorio nao encontrado.</p>
+    <a href="/plans" class="btn btn-primary">Voltar para Lista</a>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const planId = '{{ plan_id }}';
+
+function filterOptimizations(risk) {
+    const cards = document.querySelectorAll('.optimization-card');
+    const tabs = document.querySelectorAll('.tab');
+
+    tabs.forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+
+    cards.forEach(card => {
+        if (risk === 'all' || card.dataset.risk === risk) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+function copySQL(id) {
+    const code = document.querySelector(`#sql-${CSS.escape(id)} code`);
+    if (!code) return;
+
+    navigator.clipboard.writeText(code.innerText).then(() => {
+        const btn = event.target;
+        const originalText = btn.innerText;
+        btn.innerText = 'Copiado!';
+        btn.classList.add('btn-success');
+        setTimeout(() => {
+            btn.innerText = originalText;
+            btn.classList.remove('btn-success');
+        }, 2000);
+    });
+}
+</script>
+{% endblock %}
