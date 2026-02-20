@@ -2,27 +2,17 @@
 
 > Monitor de performance multi-banco de dados com analise via LLM e dashboard interativo.
 
-Ferramenta interna para monitoramento continuo de queries em SQL Server, PostgreSQL e SAP HANA. Coleta metricas em tempo real, armazena em DuckDB, exibe um dashboard web e utiliza Google Gemini para analise e sugestao de otimizacoes.
+Ferramenta de monitoramento continuo de queries em SQL Server, PostgreSQL e SAP HANA. Coleta metricas em tempo real, armazena em DuckDB, exibe um dashboard web e utiliza Google Gemini para analise e sugestao de otimizacoes.
 
 ## Inicio Rapido
 
 ```bash
-# 1. Instalar dependencias
-pip install -r requirements.txt
-
-# 2. Configurar bancos de dados
-cp config/databases.json.example config/databases.json
-# editar config/databases.json com suas credenciais
-
-# 3. Configurar variaveis de ambiente
-cp .env.example .env
-# editar .env com GEMINI_API_KEY e senhas
-
-# 4. Iniciar o monitor
-python main.py
+git clone https://github.com/rafaelfracasso/sql-performance-monitor.git
+cd sql-performance-monitor
+./start.sh
 ```
 
-Dashboard disponivel em `http://localhost:8080` apos iniciar.
+O script seleciona os drivers, instala dependências, copia os arquivos de configuração e inicia o monitor. Dashboard disponivel em `http://localhost:8080`.
 
 ## Recursos
 

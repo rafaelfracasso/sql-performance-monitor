@@ -7,27 +7,26 @@
 | Requisito | Versao minima | Notas |
 |-----------|--------------|-------|
 | Python | 3.11+ | |
-| ODBC Driver for SQL Server | 18 | Apenas se monitorar SQL Server |
 | Google Gemini API Key | — | Para analise LLM (gratuita em makersuite.google.com) |
 
-**Drivers de banco de dados (instalados no SO):**
-
-- **SQL Server:** [Microsoft ODBC Driver 18 for SQL Server](https://learn.microsoft.com/pt-br/sql/connect/odbc/download-odbc-driver-for-sql-server)
-- **PostgreSQL:** sem driver adicional (psycopg2 e instalado via pip)
-- **SAP HANA:** requer `hdbcli` (instalado via pip) + conectividade de rede com o servidor HANA
+Os drivers de banco de dados são instalados automaticamente pelo `start.sh` conforme os SGBDs selecionados. Para SQL Server, o script também instala o ODBC Driver 18 via `apt` ou `yum` (requer `sudo`). Veja [Bancos de Dados](databases.md) para detalhes de permissões por SGBD.
 
 ## Instalacao
 
 ```bash
-# Clonar ou copiar o projeto
+git clone https://github.com/rafaelfracasso/sql-performance-monitor.git
 cd sql-performance-monitor
+./start.sh
+```
 
-# Criar ambiente virtual (recomendado)
+O `start.sh` apresenta um menu para selecionar os SGBDs a monitorar, instala apenas os drivers necessários (incluindo o ODBC Driver 18 para SQL Server via apt/yum), copia os arquivos de configuração de exemplo e verifica se tudo está pronto antes de subir o processo.
+
+Para setup manual sem o script:
+
+```bash
 python -m venv .venv
 source .venv/bin/activate      # Linux/Mac
 .venv\Scripts\activate         # Windows
-
-# Instalar dependencias
 pip install -r requirements.txt
 ```
 
@@ -78,6 +77,13 @@ O dashboard e todas as demais configurações (thresholds, LLM, Teams, weekly op
 ## Primeiro Uso
 
 ```bash
+./start.sh
+```
+
+Nas execuções seguintes o script pula a instalação de dependências e vai direto para as verificações de configuração antes de subir o monitor. Para iniciar sem o script:
+
+```bash
+source .venv/bin/activate
 python main.py
 ```
 
