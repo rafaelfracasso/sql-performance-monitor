@@ -95,14 +95,14 @@ class LLMRateLimit(BaseModel):
 
 
 class LLMConfig(BaseModel):
-    """Configuração do LLM (Google Gemini)."""
-    provider: Literal["gemini"] = Field(
-        default="gemini",
-        description="Provider de LLM (atualmente apenas gemini)"
+    """Configuração do LLM (Groq)."""
+    provider: Literal["groq"] = Field(
+        default="groq",
+        description="Provider de LLM (atualmente apenas groq)"
     )
     model: str = Field(
-        default="gemini-2.0-flash-exp",
-        description="Modelo do Gemini a usar"
+        default="llama-3.3-70b-versatile",
+        description="Modelo do Groq a usar"
     )
     temperature: float = Field(
         default=0.1,
@@ -117,12 +117,12 @@ class LLMConfig(BaseModel):
         description="Máximo de tokens na resposta"
     )
     input_price_per_million: float = Field(
-        default=0.075,
+        default=0.59,
         ge=0.0,
         description="Preço por 1 milhão de tokens de entrada (USD)"
     )
     output_price_per_million: float = Field(
-        default=0.30,
+        default=0.79,
         ge=0.0,
         description="Preço por 1 milhão de tokens de saída (USD)"
     )

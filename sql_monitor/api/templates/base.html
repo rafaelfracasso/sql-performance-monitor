@@ -57,6 +57,13 @@
                     <a href="/plans" class="nav-link {% if 'plans' in request.url.path %}active{% endif %}">Planos</a>
                     <a href="/settings" class="nav-link {% if 'settings' in request.url.path %}active{% endif %}">Configuracoes</a>
 
+                    <div id="collector-timer" class="collector-timer" title="Proxima coleta do monitoramento">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" id="collector-timer-icon">
+                            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        <span id="collector-countdown">--</span>
+                    </div>
+
                     <button id="theme-toggle" class="theme-toggle" aria-label="Alternar Tema">
                         <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
                         <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
@@ -106,6 +113,69 @@
 
     <script src="/static/app.js?v={{ range(1, 10000) | random }}"></script>
     <script>
+    // Timer de proxima coleta
+    (function() {
+        const countdownEl = document.getElementById('collector-countdown');
+        const timerEl = document.getElementById('collector-timer');
+        const iconEl = document.getElementById('collector-timer-icon');
+        if (!countdownEl) return;
+
+        let remaining = null;
+        let intervalSeconds = 60;
+        let timerHandle = null;
+
+        function formatSeconds(s) {
+            s = Math.max(0, Math.round(s));
+            if (s >= 60) {
+                const m = Math.floor(s / 60);
+                const sec = s % 60;
+                return m + ':' + String(sec).padStart(2, '0');
+            }
+            return s + 's';
+        }
+
+        let fetchPending = false;
+
+        function tick() {
+            if (remaining === null) return;
+            remaining = Math.max(0, remaining - 1);
+            countdownEl.textContent = formatSeconds(remaining);
+
+            // Pulsa quando falta menos de 10s
+            if (remaining <= 10) {
+                timerEl.classList.add('collector-timer-pulse');
+            } else {
+                timerEl.classList.remove('collector-timer-pulse');
+            }
+
+            // Quando chegar em 0, recarrega do servidor para sincronizar
+            if (remaining === 0 && !fetchPending) {
+                fetchPending = true;
+                fetchStatus().finally(() => { fetchPending = false; });
+            }
+        }
+
+        async function fetchStatus() {
+            try {
+                const r = await fetch('/api/status/collector');
+                if (!r.ok) return;
+                const data = await r.json();
+                intervalSeconds = data.interval_seconds || 60;
+                const srv = data.seconds_until_next;
+                // Se servidor retornar 0 (ciclo atrasado), mostrar o intervalo completo
+                // para evitar travar no zero enquanto o próximo ciclo não conclui
+                remaining = (srv > 0) ? srv : intervalSeconds;
+                countdownEl.textContent = formatSeconds(remaining);
+            } catch (e) {
+                // Em caso de erro, reinicia a contagem pelo intervalo completo
+                remaining = intervalSeconds;
+            }
+        }
+
+        fetchStatus();
+        timerHandle = setInterval(tick, 1000);
+    })();
+
     // Sync overlay with mobile nav
     (function() {
         const btn = document.getElementById('hamburger-btn');

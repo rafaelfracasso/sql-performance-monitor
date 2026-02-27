@@ -392,8 +392,8 @@ class MetricsStore:
     -- Configurações de LLM
     CREATE TABLE IF NOT EXISTS llm_config (
         id INTEGER PRIMARY KEY DEFAULT 1,
-        provider VARCHAR(50) NOT NULL DEFAULT 'gemini',
-        model VARCHAR(100) NOT NULL DEFAULT 'gemini-flash-latest',
+        provider VARCHAR(50) NOT NULL DEFAULT 'groq',
+        model VARCHAR(100) NOT NULL DEFAULT 'llama-3.3-70b-versatile',
         temperature DOUBLE NOT NULL DEFAULT 0.1,
         max_tokens INTEGER NOT NULL DEFAULT 8192,
         max_retries INTEGER NOT NULL DEFAULT 3,
@@ -882,7 +882,7 @@ class MetricsStore:
             # Inserir configurações de LLM
             conn.execute("""
                 INSERT INTO llm_config (id, provider, model, temperature, max_tokens, max_retries)
-                SELECT 1, 'gemini', 'gemini-flash-latest', 0.1, 8192, 3
+                SELECT 1, 'groq', 'llama-3.3-70b-versatile', 0.1, 8192, 3
                 WHERE NOT EXISTS (SELECT 1 FROM llm_config WHERE id = 1)
             """)
 
@@ -1166,7 +1166,7 @@ class MetricsStore:
         recommendations: str,
         severity: str = "medium",
         ttl_hours: int = 24,
-        model_used: str = "gemini-1.5-flash",
+        model_used: str = "llama-3.3-70b-versatile",
         tokens_used: Optional[int] = None,
         analysis_duration_ms: Optional[float] = None,
         prompt_tokens: int = 0,

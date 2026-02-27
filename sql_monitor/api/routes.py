@@ -196,7 +196,7 @@ async def dashboard_redirect(request: Request):
 async def dashboard_queries(
     request: Request,
     period: str = Query("24h", description="Periodo: 24h, 7d, 30d"),
-    metric: str = Query("cpu_time_ms", description="Metrica para ordenacao"),
+    metric: str = Query("severity", description="Metrica para ordenacao"),
     view_mode: str = Query("top", description="Modo de visualizacao: top ou chronological"),
     instance: Optional[str] = Query(None, description="Filtrar por instancia"),
     database: Optional[str] = Query(None, description="Filtrar por database"),
@@ -227,7 +227,8 @@ async def dashboard_queries(
                 login_name=login_name,
                 host_name=host_name,
                 program_name=program_name,
-                search_text=search
+                search_text=search,
+                severity=severity
             )
         else:
             # Modo top: queries agregadas por hash
@@ -914,6 +915,72 @@ async def dashboard_duckdb(request: Request):
     })
 
 
+@router.post("/api/admin/clear-data")
+async def clear_all_data():
+    """
+    Trunca todas as tabelas de dados operacionais do DuckDB.
+    Mantém apenas tabelas de configuração (llm_config, thresholds, settings, etc.).
+    """
+    if not metrics_store:
+        raise HTTPException(status_code=503, detail="MetricsStore não inicializado")
+
+    DATA_TABLES = [
+        'queries_collected',
+        'query_metrics',
+        'llm_analyses',
+        'performance_alerts',
+        'table_metadata',
+        'wait_stats_snapshots',
+        'optimization_items',
+        'optimization_plans',
+        'optimization_executions',
+        'veto_records',
+    ]
+
+    results = {}
+    errors = []
+    for table in DATA_TABLES:
+        try:
+            count = metrics_store.execute_query(f"SELECT COUNT(*) FROM {table}")
+            before = count[0][0] if count and count[0] else 0
+            metrics_store.execute(f"DELETE FROM {table}")
+            results[table] = before
+        except Exception as e:
+            errors.append(f"{table}: {str(e)}")
+
+    # monitoring_cycles: apaga o histórico mas mantém o ciclo mais recente por instância
+    # para que o status das instâncias continue aparecendo como "online" no dashboard
+    try:
+        count = metrics_store.execute_query("SELECT COUNT(*) FROM monitoring_cycles")
+        before = count[0][0] if count and count[0] else 0
+        metrics_store.execute("""
+            DELETE FROM monitoring_cycles
+            WHERE id NOT IN (
+                SELECT id FROM (
+                    SELECT id,
+                           ROW_NUMBER() OVER (PARTITION BY instance_name ORDER BY cycle_started_at DESC) AS rn
+                    FROM monitoring_cycles
+                ) sub WHERE rn = 1
+            )
+        """)
+        kept = metrics_store.execute_query("SELECT COUNT(*) FROM monitoring_cycles")
+        kept_count = kept[0][0] if kept and kept[0] else 0
+        results['monitoring_cycles'] = before - kept_count
+    except Exception as e:
+        errors.append(f"monitoring_cycles: {str(e)}")
+
+    try:
+        metrics_store.execute("VACUUM")
+    except Exception:
+        pass
+
+    return {
+        "status": "ok",
+        "deleted": results,
+        "errors": errors
+    }
+
+
 @router.get("/settings", response_class=HTMLResponse)
 async def dashboard_settings(request: Request):
     """Dashboard de configurações de performance."""
@@ -1144,88 +1211,7 @@ async def get_query_full_text(query_hash: str):
     }
 
 
-from fastapi.responses import StreamingResponse
-import csv
-import io
 
-@router.get("/api/queries/export")
-async def export_queries(
-    period: str = Query("24h", description="Período"),
-    metric: str = Query("cpu_time_ms", description="Métrica"),
-    instance: Optional[str] = Query(None),
-    database: Optional[str] = Query(None),
-    severity: Optional[str] = Query(None),
-    format: str = Query("csv", description="Formato: csv")
-):
-    """API: Exporta queries para CSV."""
-    if not analytics:
-        raise HTTPException(status_code=503)
-
-    period_hours = PERIOD_MAP.get(period, 24)
-
-    result = analytics.get_worst_performers(
-        metric=metric,
-        hours=period_hours,
-        limit=1000,
-        offset=0,
-        instance_name=instance,
-        database_name=database,
-        severity=severity
-    )
-
-    # Gerar CSV
-    output = io.StringIO()
-    writer = csv.writer(output)
-
-    # Header
-    writer.writerow([
-        'Query Hash', 'Instancia', 'Database', 'Tabela', 'Query Preview',
-        'Usuario', 'Host', 'Aplicacao',
-        'CPU Medio (ms)', 'Duration Media (ms)', 'Logical Reads', 'Physical Reads', 'Writes',
-        'Wait Time (ms)', 'Memoria (MB)',
-        'Impacto Total CPU (ms)', 'Impacto Total Duration (ms)',
-        'Ocorrencias', 'Severidade', 'Tendencia', 'Trend %',
-        'Baseline Multiplier', 'Baseline Deviation %',
-        'Primeira Captura', 'Ultima Captura'
-    ])
-
-    # Dados
-    for q in result['queries']:
-        writer.writerow([
-            q['query_hash'],
-            q['instance_name'],
-            q['database_name'],
-            q['table_name'],
-            q['query_preview'][:100],
-            q['login_name'],
-            q['host_name'],
-            q['program_name'],
-            round(q['avg_cpu_time_ms'], 2),
-            round(q['avg_duration_ms'], 2),
-            round(q['avg_logical_reads'], 2),
-            round(q['avg_physical_reads'], 2),
-            round(q['avg_writes'], 2),
-            round(q['avg_wait_time_ms'], 2),
-            round(q['avg_memory_mb'], 2),
-            round(q.get('total_cpu_impact', 0), 2),
-            round(q.get('total_duration_impact', 0), 2),
-            q['occurrences'],
-            q['severity'],
-            q['trend'],
-            q.get('trend_pct', ''),
-            q.get('baseline_multiplier', ''),
-            q.get('baseline_deviation_pct', ''),
-            q['first_seen'],
-            q['last_seen']
-        ])
-
-    output.seek(0)
-
-    return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=queries_export_{period}.csv"}
-    )
 
 
 @router.get("/api/queries/timeline")
@@ -1861,6 +1847,59 @@ async def update_llm_config(config: LLMConfigRequest):
     return {"status": "updated"}
 
 
+@router.post("/api/settings/llm/reset")
+async def reset_llm_config():
+    """Reseta configuração de LLM para os valores padrão."""
+    from ..utils.llm_providers import get_default_model
+    if not metrics_store:
+        raise HTTPException(status_code=503, detail="MetricsStore não inicializado")
+
+    default_model = get_default_model('groq')
+    metrics_store.execute(f"""
+        UPDATE llm_config SET
+            provider = 'groq', model = '{default_model}',
+            temperature = 0.1, max_tokens = 8192, max_retries = 3,
+            retry_delays = '[3, 8, 15]', max_requests_per_day = 1500,
+            max_requests_per_minute = 60, max_requests_per_cycle = 20,
+            min_delay_between_requests = 2.0,
+            updated_at = CURRENT_TIMESTAMP, updated_by = 'reset'
+        WHERE id = 1
+    """)
+    return {"status": "reset"}
+
+
+@router.get("/api/settings/llm/models")
+async def get_llm_models(provider: str = Query(default=None)):
+    """Lista modelos disponíveis para o provider LLM."""
+    import os
+    from ..utils.llm_providers import get_api_key_env, list_models
+
+    # Se provider não foi passado, usa o salvo no DB
+    if not provider:
+        provider = 'groq'
+        if metrics_store:
+            try:
+                result = metrics_store.execute_query("SELECT provider FROM llm_config WHERE id = 1")
+                if result and result[0]:
+                    provider = result[0][0] or 'groq'
+            except Exception:
+                pass
+
+    try:
+        env_var = get_api_key_env(provider)
+    except ValueError as e:
+        return {"models": [], "error": str(e)}
+
+    api_key = os.getenv(env_var)
+    if not api_key:
+        return {"models": [], "error": f"{env_var} nao configurada"}
+    try:
+        model_ids = list_models(provider, api_key)
+        return {"models": model_ids}
+    except Exception as e:
+        return {"models": [], "error": str(e)}
+
+
 @router.get("/api/settings/monitor")
 async def get_monitor_config():
     """Retorna configuração de monitor."""
@@ -1877,6 +1916,41 @@ async def get_monitor_config():
         "interval_seconds": r[0],
         "updated_at": r[1],
         "updated_by": r[2]
+    }
+
+
+@router.get("/api/status/collector")
+async def get_collector_status():
+    """Retorna status do coletor: último ciclo e quando ocorrerá o próximo."""
+    if not metrics_store:
+        raise HTTPException(status_code=503, detail="MetricsStore não inicializado")
+
+    interval_result = metrics_store.execute_query(
+        "SELECT interval_seconds FROM monitor_config WHERE id = 1"
+    )
+    interval_seconds = interval_result[0][0] if interval_result else 60
+
+    last_cycle_result = metrics_store.execute_query(
+        "SELECT MAX(cycle_started_at) FROM monitoring_cycles"
+    )
+    last_cycle_at = last_cycle_result[0][0] if last_cycle_result and last_cycle_result[0][0] else None
+
+    if last_cycle_at:
+        import datetime as _dt
+        # Comparar sempre com datetime do mesmo tipo: se naive, usa now(); se aware, usa now(utc)
+        if hasattr(last_cycle_at, 'tzinfo') and last_cycle_at.tzinfo is not None:
+            now = _dt.datetime.now(last_cycle_at.tzinfo)
+        else:
+            now = _dt.datetime.now()
+        elapsed = (now - last_cycle_at).total_seconds()
+        seconds_until_next = max(0, interval_seconds - elapsed)
+    else:
+        seconds_until_next = interval_seconds
+
+    return {
+        "interval_seconds": interval_seconds,
+        "last_cycle_at": last_cycle_at.isoformat() if last_cycle_at else None,
+        "seconds_until_next": int(seconds_until_next),
     }
 
 

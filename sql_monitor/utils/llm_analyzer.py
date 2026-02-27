@@ -1,15 +1,15 @@
 """
-Análise de queries usando Google Gemini para sugestões inteligentes de índices.
+Análise de queries usando LLM para sugestões inteligentes de índices.
 """
 import os
 import json
 import time
 from collections import deque
-from google import genai
 from typing import Dict, Optional
 from enum import Enum
 from dotenv import load_dotenv
 from pathlib import Path
+from .llm_providers import create_client, get_api_key_env
 
 
 class CircuitState(Enum):
@@ -20,7 +20,7 @@ class CircuitState(Enum):
 
 
 class LLMAnalyzer:
-    """Analisa queries usando LLM (Google Gemini) para sugestões de otimização."""
+    """Analisa queries usando LLM para sugestões de otimização."""
 
     PROMPT_RELOAD_INTERVAL_SECONDS = 300  # 5 minutos
 
@@ -35,21 +35,29 @@ class LLMAnalyzer:
         """
         load_dotenv()
 
-        self.api_key = os.getenv('GEMINI_API_KEY')
-        if not self.api_key:
-            raise ValueError("GEMINI_API_KEY não encontrada. Configure no arquivo .env")
-
-        # Inicializa o cliente com a nova API
-        self.client = genai.Client(api_key=self.api_key)
-
         # Suporta receber config inteiro ou apenas secao 'llm'
         llm_config = config.get('llm', config) if 'llm' in config else config
 
-        self.model_name = llm_config.get('model', 'gemini-2.5-flash')
+        self.provider = llm_config.get('provider', 'groq')
+        self.model_name = llm_config.get('model', 'llama-3.3-70b-versatile')
         self.temperature = llm_config.get('temperature', 0.1)
         self.max_tokens = llm_config.get('max_tokens', 2048)
         self.max_retries = llm_config.get('max_retries', 3)
         self.retry_delays = llm_config.get('retry_delays', [3, 8, 15])
+
+        # metrics_store precisa ser definido antes de _load_config_from_db
+        self.metrics_store = metrics_store
+
+        # DuckDB é a fonte de verdade para configuração de LLM — sobrescreve config.json
+        self._load_config_from_db()
+
+        env_var = get_api_key_env(self.provider)
+        self.api_key = os.getenv(env_var)
+        if not self.api_key:
+            raise ValueError(f"{env_var} não encontrada. Configure no arquivo .env")
+
+        # Inicializa o cliente LLM via factory
+        self.client = create_client(self.provider, self.api_key)
 
         # Rate limiting
         rate_limit_config = llm_config.get('rate_limit', {})
@@ -76,13 +84,90 @@ class LLMAnalyzer:
         self.circuit_opened_at = 0  # Timestamp quando circuito foi aberto
 
         # Carregar prompts do DuckDB (ou fallback para defaults)
-        self.metrics_store = metrics_store
         if not metrics_store:
             import traceback
             print(f"[WARN] LLMAnalyzer inicializado SEM metrics_store - prompts da UI serão ignorados!")
             print(f"[WARN] Caller: {''.join(traceback.format_stack()[-3:-1]).strip()}")
         self.prompts = self._load_prompts()
         self.prompts_last_loaded = time.time()
+        self.config_last_loaded = time.time()
+
+    def _reload_config_if_changed(self):
+        """
+        Recarrega model/provider/temperatura do DuckDB periodicamente (a cada 5 minutos).
+        Se o provider mudou, recria o client. Permite trocar modelo sem reiniciar.
+        """
+        if not self.metrics_store:
+            return
+        now = time.time()
+        if now - self.config_last_loaded < self.PROMPT_RELOAD_INTERVAL_SECONDS:
+            return
+        try:
+            result = self.metrics_store.execute_query("""
+                SELECT provider, model, temperature, max_tokens, max_retries, retry_delays
+                FROM llm_config WHERE id = 1
+            """)
+            if not result or not result[0]:
+                return
+            row = result[0]
+            new_provider = row[0] or self.provider
+            new_model    = row[1] or self.model_name
+
+            if new_provider != self.provider:
+                env_var = get_api_key_env(new_provider)
+                new_key = os.getenv(env_var)
+                if not new_key:
+                    print(f"[WARN] Nao foi possivel trocar para provider '{new_provider}': {env_var} nao configurada")
+                    return
+                self.provider = new_provider
+                self.api_key  = new_key
+                self.client   = create_client(self.provider, self.api_key)
+                print(f"[INFO] Provider LLM atualizado para: {self.provider}")
+
+            if new_model != self.model_name:
+                print(f"[INFO] Modelo LLM atualizado: {self.model_name} -> {new_model}")
+                self.model_name = new_model
+
+            if row[2] is not None:
+                self.temperature = row[2]
+            if row[3] is not None:
+                self.max_tokens = row[3]
+            if row[4] is not None:
+                self.max_retries = row[4]
+            if row[5]:
+                import json as _json
+                self.retry_delays = _json.loads(row[5])
+
+            self.config_last_loaded = now
+        except Exception as e:
+            print(f"[WARN] Erro ao recarregar config LLM: {e}")
+
+    def _load_config_from_db(self):
+        """Sobrescreve configurações com valores do DuckDB (fonte de verdade do /settings)."""
+        if not self.metrics_store:
+            return
+        try:
+            result = self.metrics_store.execute_query("""
+                SELECT provider, model, temperature, max_tokens, max_retries, retry_delays
+                FROM llm_config WHERE id = 1
+            """)
+            if result and result[0]:
+                row = result[0]
+                if row[0]:
+                    self.provider = row[0]
+                if row[1]:
+                    self.model_name = row[1]
+                if row[2] is not None:
+                    self.temperature = row[2]
+                if row[3] is not None:
+                    self.max_tokens = row[3]
+                if row[4] is not None:
+                    self.max_retries = row[4]
+                if row[5]:
+                    import json as _json
+                    self.retry_delays = _json.loads(row[5])
+        except Exception as e:
+            print(f"[WARN] Nao foi possivel carregar config LLM do DuckDB: {e}")
 
     def _load_prompts(self) -> Dict:
         """
@@ -370,12 +455,13 @@ class LLMAnalyzer:
             print(f"   🚫 {circuit_reason}")
             return {
                 'explanation': f"Análise pulada: {circuit_reason}",
-                'suggestions': "API Gemini está com falhas sistêmicas. Aguardando recuperação.",
+                'suggestions': "API LLM está com falhas sistêmicas. Aguardando recuperação.",
                 'priority': "N/A",
                 'justification': "Circuit breaker ativo para proteger contra falhas em cascata.",
                 'tokens_used': 0,
                 'prompt_tokens': 0,
-                'completion_tokens': 0
+                'completion_tokens': 0,
+                'model_used': self.model_name
             }
 
         # Verifica rate limit ANTES de fazer qualquer coisa
@@ -392,11 +478,15 @@ class LLMAnalyzer:
                 'justification': "Rate limit atingido. Aumente os limites no config.json se necessário.",
                 'tokens_used': 0,
                 'prompt_tokens': 0,
-                'completion_tokens': 0
+                'completion_tokens': 0,
+                'model_used': self.model_name
             }
 
         # Aguarda delay mínimo entre requests
         self._wait_for_rate_limit()
+
+        # Recarrega config do DB se necessário (permite trocar modelo sem reiniciar)
+        self._reload_config_if_changed()
 
         prompt = self._build_analysis_prompt(
             sanitized_query,
@@ -422,31 +512,30 @@ class LLMAnalyzer:
                     time.sleep(wait_time)
                     print(f"   🔄 Tentativa {attempt + 1}/{max_retries}...")
 
-                response = self.client.models.generate_content(
+                response = self.client.chat.completions.create(
                     model=self.model_name,
-                    contents=prompt,
-                    config={
-                        'temperature': self.temperature,
-                        'max_output_tokens': self.max_tokens,
-                    }
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=self.temperature,
+                    max_tokens=self.max_tokens,
                 )
 
                 # Registra request bem-sucedido
                 self._record_request()
-                self._record_success()  # ✅ Circuit breaker: registra sucesso
+                self._record_success()  # Circuit breaker: registra sucesso
 
-                response_length = len(response.text)
+                response_text = response.choices[0].message.content
+                response_length = len(response_text)
 
                 if response_length < 500:
-                    print(f"   Resposta LLM suspeita (muito curta: {response_length} chars): {response.text[:200]}...")
+                    print(f"   Resposta LLM suspeita (muito curta: {response_length} chars): {response_text[:200]}...")
 
-                result = self._parse_llm_response(response.text)
+                result = self._parse_llm_response(response_text)
 
                 # Extrair uso de tokens se disponível
-                if hasattr(response, 'usage_metadata') and response.usage_metadata:
-                    result['tokens_used'] = response.usage_metadata.total_token_count or 0
-                    result['prompt_tokens'] = response.usage_metadata.prompt_token_count or 0
-                    result['completion_tokens'] = response.usage_metadata.candidates_token_count or 0
+                if hasattr(response, 'usage') and response.usage:
+                    result['tokens_used'] = response.usage.total_tokens or 0
+                    result['prompt_tokens'] = response.usage.prompt_tokens or 0
+                    result['completion_tokens'] = response.usage.completion_tokens or 0
                 else:
                     result['tokens_used'] = 0
                     result['prompt_tokens'] = 0
@@ -454,8 +543,10 @@ class LLMAnalyzer:
 
                 # Debug: verifica se sugestões foram encontradas
                 if not result['suggestions'] or result['suggestions'] == '':
-                    print(f"   ⚠️  AVISO: Nenhuma sugestão de índice encontrada na resposta!")
-                    print(f"   📝 Primeiros 300 chars da resposta: {response.text[:300]}")
+                    print(f"   AVISO: Nenhuma sugestao de indice encontrada na resposta!")
+                    print(f"   Primeiros 300 chars da resposta: {response_text[:300]}")
+
+                result['model_used'] = self.model_name
 
                 # Sucesso! Retorna resultado
                 if attempt > 0:
@@ -485,8 +576,7 @@ class LLMAnalyzer:
                         self.quota_exhausted_until = time.time() + 60
                         print(f"   ⏰ API bloqueada por ~60s")
 
-                    print(f"   💡 Dica: Considere usar gemini-1.5-flash (1500 RPD) ao invés de gemini-2.5-flash (20 RPD)")
-                    self._record_failure(is_retryable_error=False)  # ❌ Circuit breaker: falha sistemática
+                    self._record_failure(is_retryable_error=False)  # Circuit breaker: falha sistematica
                     break  # NÃO tenta novamente em caso de quota
 
                 # Verifica se é erro 503 (overloaded) - esse pode tentar novamente
@@ -503,8 +593,8 @@ class LLMAnalyzer:
                     self._record_failure(is_retryable_error=is_retryable_503)
                 else:
                     # Erro não-retryable (404, auth error, etc)
-                    print(f"   ✗ Erro ao chamar Gemini API: {error_str}")
-                    self._record_failure(is_retryable_error=False)  # ❌ Circuit breaker: falha sistemática
+                    print(f"   ✗ Erro ao chamar LLM API: {error_str}")
+                    self._record_failure(is_retryable_error=False)  # Circuit breaker: falha sistematica
                     break
 
         # Se chegou aqui, todas as tentativas falharam
@@ -512,10 +602,11 @@ class LLMAnalyzer:
             'explanation': f"Erro na análise LLM após {max_retries} tentativas: {str(last_error)}",
             'suggestions': "Não foi possível gerar sugestões devido a problemas com a API.",
             'priority': "DESCONHECIDO",
-            'justification': "API Gemini temporariamente indisponível ou limite de taxa excedido.",
+            'justification': "API LLM temporariamente indisponivel ou limite de taxa excedido.",
             'tokens_used': 0,
             'prompt_tokens': 0,
-            'completion_tokens': 0
+            'completion_tokens': 0,
+            'model_used': self.model_name
         }
 
     def _build_analysis_prompt(
@@ -683,11 +774,12 @@ class LLMAnalyzer:
                     print(f"⏳ Aguardando 3s antes de testar novamente...")
                     time.sleep(3)
 
-                response = self.client.models.generate_content(
+                response = self.client.chat.completions.create(
                     model=self.model_name,
-                    contents="Responda apenas: OK"
+                    messages=[{"role": "user", "content": "Responda apenas: OK"}],
+                    max_tokens=10,
                 )
-                print(f"✓ Gemini API conectada: {self.model_name}")
+                print(f"✓ LLM API conectada ({self.provider}): {self.model_name}")
                 return True
 
             except Exception as e:
@@ -696,12 +788,12 @@ class LLMAnalyzer:
                                '429' in error_str or 'UNAVAILABLE' in error_str)
 
                 if is_retryable and attempt < max_retries - 1:
-                    print(f"⚠️  API temporariamente indisponível, tentando novamente...")
+                    print(f"API temporariamente indisponivel, tentando novamente...")
                     continue
                 else:
-                    print(f"✗ Erro ao testar Gemini API: {e}")
+                    print(f"✗ Erro ao testar LLM API ({self.provider}): {e}")
                     if is_retryable:
-                        print(f"   ℹ️  Não se preocupe: o monitor vai usar retry automático durante as análises")
+                        print(f"   O monitor vai usar retry automatico durante as analises")
                     return False
 
         return False

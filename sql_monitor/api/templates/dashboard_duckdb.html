@@ -1,9 +1,49 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="page-header">
-    <h2>Status DuckDB Interno</h2>
-    <p class="subtitle">Estatísticas do banco de dados de métricas (metrics.duckdb)</p>
+<div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+    <div>
+        <h2>Status DuckDB Interno</h2>
+        <p class="subtitle">Estatísticas do banco de dados de métricas (metrics.duckdb)</p>
+    </div>
+    <button class="btn btn-danger" onclick="openClearModal()" style="flex-shrink:0;">
+        Limpar Todos os Dados
+    </button>
+</div>
+
+<!-- Modal de confirmacao de limpeza -->
+<div id="clearDataModal" style="display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,0.7); align-items:center; justify-content:center;">
+    <div style="background:var(--surface-color); border:2px solid var(--error-color); border-radius:12px; padding:2rem; max-width:480px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+        <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--error-color)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <h3 style="color:var(--error-color); margin:0;">Atencao: operacao irreversivel</h3>
+        </div>
+        <p style="margin-bottom:0.75rem; color:var(--text-primary);">
+            Isso vai apagar <strong>todos os dados coletados</strong>:
+        </p>
+        <ul style="margin:0 0 1rem 1.25rem; color:var(--text-secondary); font-size:0.875rem; line-height:1.8;">
+            <li>Queries coletadas e metricas</li>
+            <li>Analises LLM</li>
+            <li>Alertas de performance</li>
+            <li>Historico de ciclos de monitoramento</li>
+            <li>Wait stats, planos de otimizacao, vetos</li>
+        </ul>
+        <p style="margin-bottom:1.25rem; color:var(--text-secondary); font-size:0.875rem;">
+            Configuracoes (thresholds, LLM, providers) serao mantidas.
+        </p>
+        <p style="margin-bottom:0.5rem; font-size:0.875rem;">
+            Digite <strong>LIMPAR</strong> para confirmar:
+        </p>
+        <input id="clearConfirmInput" type="text" class="form-control" placeholder="LIMPAR"
+               style="margin-bottom:1.25rem;"
+               oninput="document.getElementById('clearConfirmBtn').disabled = this.value !== 'LIMPAR'">
+        <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
+            <button class="btn btn-secondary" onclick="closeClearModal()">Cancelar</button>
+            <button id="clearConfirmBtn" class="btn btn-danger" disabled onclick="executeClear()">
+                Sim, apagar tudo
+            </button>
+        </div>
+    </div>
 </div>
 
 {% if stats.storage %}
@@ -117,4 +157,50 @@
         </table>
     </div>
 </div>
+{% endblock content %}
+
+{% block extra_scripts %}
+<script>
+function openClearModal() {
+    const modal = document.getElementById('clearDataModal');
+    document.getElementById('clearConfirmInput').value = '';
+    document.getElementById('clearConfirmBtn').disabled = true;
+    modal.style.display = 'flex';
+}
+
+function closeClearModal() {
+    document.getElementById('clearDataModal').style.display = 'none';
+}
+
+async function executeClear() {
+    const btn = document.getElementById('clearConfirmBtn');
+    btn.disabled = true;
+    btn.textContent = 'Apagando...';
+
+    try {
+        const resp = await fetch('/api/admin/clear-data', { method: 'POST' });
+        const data = await resp.json();
+
+        closeClearModal();
+
+        const total = Object.values(data.deleted || {}).reduce((a, b) => a + b, 0);
+        if (window.SQLMonitor && SQLMonitor.Utils) {
+            SQLMonitor.Utils.showToast(`${total.toLocaleString()} registros removidos. Dados limpos.`, 'success');
+        }
+
+        setTimeout(() => location.reload(), 1500);
+    } catch (e) {
+        btn.disabled = false;
+        btn.textContent = 'Sim, apagar tudo';
+        if (window.SQLMonitor && SQLMonitor.Utils) {
+            SQLMonitor.Utils.showToast('Erro ao limpar dados: ' + e.message, 'error');
+        }
+    }
+}
+
+// Fecha o modal clicando fora
+document.getElementById('clearDataModal').addEventListener('click', function(e) {
+    if (e.target === this) closeClearModal();
+});
+</script>
 {% endblock %}

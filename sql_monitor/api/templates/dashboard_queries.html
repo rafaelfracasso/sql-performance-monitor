@@ -8,15 +8,6 @@
             <p class="subtitle">{% if view_mode == 'chronological' %}Historico de capturas ordenado por data{% else %}Analise de queries com pior performance{% endif %}</p>
         </div>
         <div class="header-actions">
-            {% if view_mode == 'top' %}
-            <button onclick="analyzeSelected()" class="btn btn-primary" id="btnBulkAnalyze" disabled>
-                Analisar com IA (<span id="selectedCount">0</span>)
-            </button>
-            <a href="/api/queries/export?period={{ period }}&metric={{ metric }}{% if instance %}&instance={{ instance }}{% endif %}{% if database %}&database={{ database }}{% endif %}{% if severity %}&severity={{ severity }}{% endif %}"
-               class="btn btn-secondary" download>
-                Exportar CSV
-            </a>
-            {% endif %}
         </div>
     </div>
 </div>
@@ -62,6 +53,7 @@
 
                 {% if view_mode == 'top' %}
                 <select name="metric" id="metric" onchange="this.form.submit()" class="chip-select">
+                    <option value="severity" {% if metric == 'severity' %}selected{% endif %}>Severidade</option>
                     <option value="cpu_time_ms" {% if metric == 'cpu_time_ms' %}selected{% endif %}>CPU (avg)</option>
                     <option value="duration_ms" {% if metric == 'duration_ms' %}selected{% endif %}>Duration (avg)</option>
                     <option value="total_cpu_impact" {% if metric == 'total_cpu_impact' %}selected{% endif %}>Impacto Total CPU</option>
@@ -72,6 +64,7 @@
                     <option value="wait_time_ms" {% if metric == 'wait_time_ms' %}selected{% endif %}>Wait</option>
                     <option value="memory_mb" {% if metric == 'memory_mb' %}selected{% endif %}>Memory</option>
                 </select>
+                {% endif %}
 
                 <select name="severity" id="severity" onchange="this.form.submit()" class="chip-select {% if severity %}chip-active{% endif %}">
                     <option value="">Severidade</option>
@@ -80,7 +73,6 @@
                     <option value="medium" {% if severity == 'medium' %}selected{% endif %}>Medium</option>
                     <option value="low" {% if severity == 'low' %}selected{% endif %}>Low</option>
                 </select>
-                {% endif %}
 
                 <button type="button" class="chip-btn {% if instance or database or login_name or host_name or program_name %}chip-active{% endif %}" onclick="toggleAdvancedFilters()">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -172,13 +164,12 @@
             <thead>
                 <tr>
                     {% if view_mode == 'top' %}
-                    <th style="width: 30px;"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>
                     <th class="col-trend">Trend</th>
                     {% endif %}
                     <th>Instancia</th>
                     <th>Database</th>
                     <th>Query</th>
-                    <th class="col-number">CPU (ms)</th>
+                    <th class="col-number">CPU/Mem</th>
                     <th class="col-number">Duration (ms)</th>
                     {% if metric and metric.startswith('total_') %}
                     <th class="col-number">Impact CPU</th>
@@ -186,12 +177,12 @@
                     {% endif %}
                     <th class="col-number db-specific sqlserver">Reads</th>
                     <th class="col-number db-specific sqlserver">Wait (ms)</th>
-                    <th class="col-number db-specific sqlserver">Mem (MB)</th>
                     {% if view_mode == 'top' %}
                     <th class="col-number">Exec</th>
                     <th>Ultima</th>
+                    {% endif %}
                     <th>Sev</th>
-                    {% else %}
+                    {% if view_mode == 'chronological' %}
                     <th>Capturado em</th>
                     {% endif %}
                     <th>Acoes</th>
@@ -201,7 +192,6 @@
                 {% for query in queries %}
                 <tr data-db-type="{{ query.db_type }}" data-query-hash="{{ query.query_hash }}">
                     {% if view_mode == 'top' %}
-                    <td><input type="checkbox" class="query-checkbox" value="{{ query.query_hash }}" onclick="updateBulkButton()"></td>
                     <td class="col-trend">
                         {% if query.trend == 'worsening' %}
                         <span class="trend-badge trend-worsening" title="Piorando {{ query.trend_pct|default(0) }}%">&#9650;{{ query.trend_pct|default(0)|abs|int }}%</span>
@@ -224,7 +214,9 @@
                         <span title="{{ query.query_preview }}">{{ query.query_preview[:50] }}...</span>
                     </td>
                     {% if view_mode == 'top' %}
-                    <td class="number">{{ query.avg_cpu_time_ms|format_number }}</td>
+                    <td class="number" title="{% if query.db_type == 'hana' %}Memoria (HANA){% else %}CPU{% endif %}">
+                        {% if query.db_type == 'hana' %}{{ query.avg_memory_mb|format_number }} MB{% else %}{{ query.avg_cpu_time_ms|format_number }}{% endif %}
+                    </td>
                     <td class="number">{{ query.avg_duration_ms|format_number }}</td>
                     {% if metric and metric.startswith('total_') %}
                     <td class="number"><strong>{{ query.total_cpu_impact|format_number }}</strong></td>
@@ -232,7 +224,6 @@
                     {% endif %}
                     <td class="number db-specific sqlserver">{{ query.avg_logical_reads|format_number }}</td>
                     <td class="number db-specific sqlserver">{{ query.avg_wait_time_ms|format_number }}</td>
-                    <td class="number db-specific sqlserver">{{ query.avg_memory_mb|format_number }}</td>
                     <td class="number">{{ query.occurrences|format_number }}</td>
                     <td class="datetime" title="{{ query.last_seen }}">
                         {{ query.last_seen.strftime('%d/%m %H:%M') if query.last_seen else 'N/A' }}
@@ -243,11 +234,21 @@
                         </span>
                     </td>
                     {% else %}
-                    <td class="number">{{ query.cpu_time_ms|format_number }}</td>
+                    <td class="number" title="{% if query.db_type == 'hana' %}Memoria (HANA){% else %}CPU{% endif %}">
+                        {% if query.db_type == 'hana' %}{{ query.memory_mb|format_number }} MB{% else %}{{ query.cpu_time_ms|format_number }}{% endif %}
+                    </td>
                     <td class="number">{{ query.duration_ms|format_number }}</td>
                     <td class="number db-specific sqlserver">{{ query.logical_reads|format_number }}</td>
                     <td class="number db-specific sqlserver">{{ query.wait_time_ms|format_number }}</td>
-                    <td class="number db-specific sqlserver">{{ query.memory_mb|format_number }}</td>
+                    <td>
+                        {% if query.severity %}
+                        <span class="severity-badge severity-{{ query.severity|lower }}">
+                            {{ query.severity[0]|upper }}
+                        </span>
+                        {% else %}
+                        <span class="severity-badge severity-none" title="Sem analise LLM">—</span>
+                        {% endif %}
+                    </td>
                     <td class="datetime" title="{{ query.collected_at }}">
                         {{ query.collected_at.strftime('%d/%m %H:%M:%S') if query.collected_at else 'N/A' }}
                     </td>

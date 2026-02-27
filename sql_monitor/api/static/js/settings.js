@@ -156,20 +156,65 @@ const SettingsManager = {
 
     async loadLLMConfig() {
         try {
-            const response = await fetch('/api/settings/llm');
-            const data = await response.json();
+            const configResp = await fetch('/api/settings/llm');
+            const data = await configResp.json();
+
+            const provider = data.provider || 'groq';
+
+            const modelsResp = await fetch('/api/settings/llm/models?provider=' + provider);
+            const modelsData = await modelsResp.json();
+
+            // Popula o select de modelos com a lista da API
+            const modelSelect = document.getElementById('llm-model-select');
+            if (modelSelect) {
+                const currentModel = data.model || '';
+                const models = (modelsData.models && modelsData.models.length > 0) ? modelsData.models : [];
+                const modelInList = models.includes(currentModel);
+                let options = models.map(m =>
+                    `<option value="${m}"${m === currentModel ? ' selected' : ''}>${m}</option>`
+                ).join('');
+                if (!modelInList && currentModel) {
+                    options = `<option value="${currentModel}" selected>${currentModel} [invalido - nao existe no provider]</option>` + options;
+                }
+                modelSelect.innerHTML = options;
+            }
+
             const form = document.getElementById('form-llm-config');
             if (form && data) {
                 Object.keys(data).forEach(key => {
                     const input = form.querySelector(`[name="${key}"]`);
-                    if (input) {
-                        input.value = (key === 'retry_delays' && Array.isArray(data[key]))
-                            ? JSON.stringify(data[key]) : data[key];
+                    if (!input) return;
+                    if (key === 'model' && input.tagName === 'SELECT') return; // já tratado acima
+                    if (key === 'provider' && input.tagName === 'SELECT') {
+                        input.value = data[key] || 'groq';
+                        return;
                     }
+                    input.value = (key === 'retry_delays' && Array.isArray(data[key]))
+                        ? JSON.stringify(data[key]) : (data[key] ?? '');
                 });
             }
         } catch (error) {
             console.error('Erro ao carregar LLM config:', error);
+        }
+    },
+
+    async onProviderChange(provider) {
+        const modelSelect = document.getElementById('llm-model-select');
+        if (!modelSelect) return;
+        modelSelect.innerHTML = '<option value="">Carregando modelos...</option>';
+        try {
+            const resp = await fetch('/api/settings/llm/models?provider=' + provider);
+            const data = await resp.json();
+            const models = (data.models && data.models.length > 0) ? data.models : [];
+            if (models.length === 0) {
+                const errMsg = data.error ? data.error : 'Nenhum modelo disponivel';
+                modelSelect.innerHTML = `<option value="">${errMsg}</option>`;
+                return;
+            }
+            modelSelect.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join('');
+        } catch (error) {
+            modelSelect.innerHTML = '<option value="">Erro ao carregar modelos</option>';
+            console.error('Erro ao carregar modelos do provider:', error);
         }
     },
 
@@ -393,6 +438,22 @@ const SettingsManager = {
                 this.setBtnLoading(btn, false);
             }
         });
+    },
+
+    async resetLLMConfig() {
+        if (!confirm('Resetar configuracao de LLM para os valores padrao?')) return;
+        try {
+            const response = await fetch('/api/settings/llm/reset', { method: 'POST' });
+            if (response.ok) {
+                this.toast('Configuracao de LLM resetada para defaults', 'success');
+                this.loadLLMConfig();
+            } else {
+                this.toast('Erro ao resetar configuracao de LLM', 'error');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            this.toast('Erro ao resetar configuracao de LLM', 'error');
+        }
     },
 
     initLLMForm() {

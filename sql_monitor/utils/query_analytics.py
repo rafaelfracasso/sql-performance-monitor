@@ -236,7 +236,7 @@ class QueryAnalytics:
 
     def get_worst_performers(
         self,
-        metric: str = 'cpu_time_ms',
+        metric: str = 'severity',
         hours: int = 24,
         limit: int = 10,
         offset: int = 0,
@@ -252,7 +252,10 @@ class QueryAnalytics:
         Retorna queries com pior performance.
 
         Args:
-            metric: Métrica para ordenação (cpu_time_ms, duration_ms, logical_reads, physical_reads, writes, wait_time_ms, memory_mb)
+            metric: Métrica para ordenação. 'severity' (padrão) ordena por severidade desc
+                    depois por cpu_time_ms. Outras opções: cpu_time_ms, duration_ms,
+                    logical_reads, physical_reads, writes, wait_time_ms, memory_mb,
+                    total_cpu_impact, total_duration_impact.
             hours: Período de análise em horas
             limit: Número máximo de resultados
             offset: Offset para paginação
@@ -268,6 +271,7 @@ class QueryAnalytics:
             Dicionário com queries, total, e metadados de paginação
         """
         VALID_METRICS = {
+            'severity',
             'cpu_time_ms', 'duration_ms', 'logical_reads', 'physical_reads',
             'writes', 'wait_time_ms', 'memory_mb',
             'total_cpu_impact', 'total_duration_impact'
@@ -438,7 +442,12 @@ class QueryAnalytics:
             LEFT JOIN previous_period pp ON cp.query_hash = pp.query_hash
             LEFT JOIN baseline_7d bl ON cp.query_hash = bl.query_hash
             {"WHERE max_severity = ?" if severity else ""}
-            ORDER BY {"total_cpu_impact" if metric == "total_cpu_impact" else "total_duration_impact" if metric == "total_duration_impact" else f"avg_{metric}"} DESC
+            ORDER BY {
+                "GREATEST(cp.llm_severity_num, COALESCE(cp.alert_severity_num, 0)) DESC, cp.avg_cpu_time_ms" if metric == "severity"
+                else "total_cpu_impact" if metric == "total_cpu_impact"
+                else "total_duration_impact" if metric == "total_duration_impact"
+                else f"avg_{metric}"
+            } DESC
             LIMIT ? OFFSET ?
         """
 
@@ -528,7 +537,8 @@ class QueryAnalytics:
         login_name: Optional[str] = None,
         host_name: Optional[str] = None,
         program_name: Optional[str] = None,
-        search_text: Optional[str] = None
+        search_text: Optional[str] = None,
+        severity: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Retorna capturas individuais de queries em ordem cronologica.
@@ -578,13 +588,31 @@ class QueryAnalytics:
 
         where_clause = "WHERE " + " AND ".join(where_clauses)
 
+        # severity é filtrado após o JOIN, precisa de having/where externo
+        severity_filter = "AND sev.severity = ?" if severity else ""
+        if severity:
+            params_with_sev = params + [severity]
+        else:
+            params_with_sev = params
+
         # Conta total para paginacao
         count_query = f"""
             SELECT COUNT(*)
             FROM queries_collected qc
+            JOIN query_metrics qm ON qc.query_hash = qm.query_hash AND qc.collected_at = qm.collected_at
+            LEFT JOIN (
+                SELECT query_hash,
+                       CASE GREATEST(
+                           MAX(CASE severity WHEN 'critical' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END),
+                           COALESCE((SELECT MAX(CASE pa.severity WHEN 'critical' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END)
+                                     FROM performance_alerts pa WHERE pa.query_hash = la_inner.query_hash), 0)
+                       ) WHEN 4 THEN 'critical' WHEN 3 THEN 'high' WHEN 2 THEN 'medium' WHEN 1 THEN 'low' ELSE NULL END as severity
+                FROM llm_analyses la_inner GROUP BY query_hash
+            ) sev ON sev.query_hash = qc.query_hash
             {where_clause}
+            {severity_filter}
         """
-        total_count = conn.execute(count_query, params).fetchone()[0]
+        total_count = conn.execute(count_query, params_with_sev).fetchone()[0]
 
         # Query principal - cada linha e uma captura individual
         query = f"""
@@ -607,15 +635,27 @@ class QueryAnalytics:
                 qm.writes,
                 qm.wait_time_ms,
                 qm.memory_mb,
-                qm.row_count
+                qm.row_count,
+                sev.severity,
+                CASE WHEN sev.severity IS NOT NULL THEN 1 ELSE 0 END as has_analysis
             FROM queries_collected qc
             JOIN query_metrics qm ON qc.query_hash = qm.query_hash AND qc.collected_at = qm.collected_at
+            LEFT JOIN (
+                SELECT query_hash,
+                       CASE GREATEST(
+                           MAX(CASE severity WHEN 'critical' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END),
+                           COALESCE((SELECT MAX(CASE pa.severity WHEN 'critical' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END)
+                                     FROM performance_alerts pa WHERE pa.query_hash = la_inner.query_hash), 0)
+                       ) WHEN 4 THEN 'critical' WHEN 3 THEN 'high' WHEN 2 THEN 'medium' WHEN 1 THEN 'low' ELSE NULL END as severity
+                FROM llm_analyses la_inner GROUP BY query_hash
+            ) sev ON sev.query_hash = qc.query_hash
             {where_clause}
+            {severity_filter}
             ORDER BY qc.collected_at DESC
             LIMIT ? OFFSET ?
         """
 
-        final_params = params + [limit, offset]
+        final_params = params_with_sev + [limit, offset]
         results = conn.execute(query, final_params).fetchall()
 
         queries = [
@@ -638,7 +678,9 @@ class QueryAnalytics:
                 'writes': row[15] or 0.0,
                 'wait_time_ms': row[16] or 0.0,
                 'memory_mb': row[17] or 0.0,
-                'row_count': row[18] or 0
+                'row_count': row[18] or 0,
+                'severity': row[19],
+                'has_analysis': bool(row[20])
             }
             for row in results
         ]

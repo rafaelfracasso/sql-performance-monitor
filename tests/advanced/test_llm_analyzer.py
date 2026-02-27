@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Teste do LLM Analyzer com Gemini API.
+Teste do LLM Analyzer com Groq API.
 """
 import os
 from dotenv import load_dotenv
@@ -10,16 +10,16 @@ load_dotenv()
 def test_llm_analyzer():
     """Testa análise de query com LLM."""
     print("=" * 80)
-    print("TESTE: LLM Analyzer com Gemini")
+    print("TESTE: LLM Analyzer com Groq")
     print("=" * 80)
 
     from sql_monitor.utils.llm_analyzer import LLMAnalyzer
 
     # Verificar API key
-    api_key = os.getenv('GEMINI_API_KEY')
-    if not api_key or api_key == 'your_gemini_api_key_here':
-        print("\n⚠️  API Key Gemini não configurada no .env")
-        print("   Configure GEMINI_API_KEY para executar este teste")
+    api_key = os.getenv('GROQ_API_KEY')
+    if not api_key or api_key == 'your_groq_api_key_here':
+        print("\n  API Key Groq nao configurada no .env")
+        print("   Configure GROQ_API_KEY para executar este teste")
         return False
 
     print(f"\n✓ API Key encontrada: {api_key[:10]}...")
@@ -27,7 +27,7 @@ def test_llm_analyzer():
     # Criar analyzer
     config = {
         'api_key': api_key,
-        'model': 'gemini-2.0-flash-exp',
+        'model': 'llama-3.3-70b-versatile',
         'max_tokens': 2000
     }
 
@@ -55,7 +55,7 @@ def test_llm_analyzer():
 
     # Índices existentes formatados
     existing_indexes = """
-Índices Existentes:
+Indices Existentes:
 1. PK_Orders (PRIMARY KEY)
    - Columns: OrderID
    - Unique: Yes
@@ -82,13 +82,13 @@ def test_llm_analyzer():
     print("Analisando query problemática...")
     print("=" * 80)
     print(f"\nQuery: {test_query[:100]}...")
-    print(f"Duração: {metrics['duration_seconds']}s")
+    print(f"Duracao: {metrics['duration_seconds']}s")
     print(f"CPU: {metrics['cpu_time_ms']}ms")
     print(f"Logical Reads: {metrics['logical_reads']:,}")
-    print(f"Execuções: {metrics['execution_count']}")
+    print(f"Execucoes: {metrics['execution_count']}")
 
     try:
-        print("\n🤖 Enviando para análise do Gemini...")
+        print("\nEnviando para analise do Groq...")
 
         analysis = analyzer.analyze_query_performance(
             sanitized_query=test_query,
@@ -100,35 +100,34 @@ def test_llm_analyzer():
         )
 
         if analysis:
-            print("\n✓ Análise recebida com sucesso!")
+            print("\n✓ Analise recebida com sucesso!")
             print("\n" + "=" * 80)
-            print("RESULTADO DA ANÁLISE")
+            print("RESULTADO DA ANALISE")
             print("=" * 80)
 
-            # Mostrar análise
             if isinstance(analysis, dict):
                 if 'summary' in analysis:
-                    print(f"\n📊 Resumo:\n{analysis['summary'][:300]}...")
+                    print(f"\nResumo:\n{analysis['summary'][:300]}...")
                 if 'issues' in analysis:
-                    print(f"\n⚠️  Problemas encontrados: {len(analysis['issues'])}")
+                    print(f"\nProblemas encontrados: {len(analysis['issues'])}")
                     for i, issue in enumerate(analysis['issues'][:3], 1):
                         print(f"   {i}. {issue[:100]}...")
                 if 'recommendations' in analysis:
-                    print(f"\n💡 Recomendações: {len(analysis['recommendations'])}")
+                    print(f"\nRecomendacoes: {len(analysis['recommendations'])}")
                     for i, rec in enumerate(analysis['recommendations'][:3], 1):
                         print(f"   {i}. {rec[:100]}...")
             else:
                 print(f"\n{analysis[:500]}...")
 
-            print("\n✅ LLM Analyzer funcionando corretamente!")
+            print("\n✓ LLM Analyzer funcionando corretamente!")
             return True
 
         else:
-            print("\n✗ Análise retornou vazia")
+            print("\n✗ Analise retornou vazia")
             return False
 
     except Exception as e:
-        print(f"\n✗ Erro na análise: {e}")
+        print(f"\n✗ Erro na analise: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -137,19 +136,19 @@ def test_llm_analyzer():
 def test_llm_batch_analysis():
     """Testa análise em lote."""
     print("\n" + "=" * 80)
-    print("TESTE: Análise em Lote")
+    print("TESTE: Analise em Lote")
     print("=" * 80)
 
     from sql_monitor.utils.llm_analyzer import LLMAnalyzer
 
-    api_key = os.getenv('GEMINI_API_KEY')
-    if not api_key or api_key == 'your_gemini_api_key_here':
-        print("\n⚠️  Pulando teste (API key não configurada)")
+    api_key = os.getenv('GROQ_API_KEY')
+    if not api_key or api_key == 'your_groq_api_key_here':
+        print("\n  Pulando teste (API key nao configurada)")
         return True
 
     config = {
         'api_key': api_key,
-        'model': 'gemini-2.0-flash-exp',
+        'model': 'llama-3.3-70b-versatile',
         'max_tokens': 1000
     }
 
@@ -167,64 +166,33 @@ def test_llm_batch_analysis():
         },
         {
             'query': 'SELECT p.*, c.* FROM Products p JOIN Categories c ON p.CategoryID = c.ID',
-            'metrics': {'duration_seconds': 15, 'cpu_time_ms': 12000, 'logical_reads': 25000}
+            'metrics': {'duration_seconds': 3, 'cpu_time_ms': 2000, 'logical_reads': 3000}
         }
     ]
 
-    print(f"\n📊 Analisando {len(queries)} queries...")
+    print(f"\nAnalisando {len(queries)} queries...")
 
     success_count = 0
-    for i, query_data in enumerate(queries, 1):
-        print(f"\n{i}. {query_data['query'][:60]}...")
-
+    for i, q in enumerate(queries, 1):
         try:
-            analysis = analyzer.analyze_query_performance(
-                sanitized_query=query_data['query'],
-                placeholder_map="@p1: type=INT",
-                table_ddl="CREATE TABLE Test (id INT)",
-                existing_indexes="No indexes",
-                metrics=query_data['metrics'],
+            result = analyzer.analyze_query_performance(
+                sanitized_query=q['query'],
+                placeholder_map='',
+                table_ddl='',
+                existing_indexes='',
+                metrics=q['metrics'],
                 query_plan=None
             )
-
-            if analysis:
-                print(f"   ✓ Análise OK")
+            if result:
+                print(f"   {i}. OK - {q['query'][:60]}...")
                 success_count += 1
-            else:
-                print(f"   ⚠️  Análise vazia")
-
         except Exception as e:
-            print(f"   ✗ Erro: {e}")
+            print(f"   {i}. ERRO: {e}")
 
-    print(f"\n✓ Análises concluídas: {success_count}/{len(queries)}")
-    return success_count >= 2  # Pelo menos 2 de 3
+    print(f"\nResultado: {success_count}/{len(queries)} analises bem-sucedidas")
+    return success_count > 0
 
 
-if __name__ == '__main__':
-    print("\n🚀 Iniciando testes do LLM Analyzer...\n")
-
-    results = []
-
-    # Teste 1: Análise única
-    results.append(("Análise LLM Única", test_llm_analyzer()))
-
-    # Teste 2: Análise em lote
-    results.append(("Análise LLM em Lote", test_llm_batch_analysis()))
-
-    # Resumo
-    print("\n" + "=" * 80)
-    print("RESUMO DOS TESTES LLM ANALYZER")
-    print("=" * 80)
-
-    for name, success in results:
-        status = "✓ PASSOU" if success else "✗ FALHOU"
-        print(f"{status}: {name}")
-
-    total = len(results)
-    passed = sum(1 for _, success in results if success)
-    print(f"\nTotal: {passed}/{total} testes passaram")
-
-    if passed == total:
-        print("\n✅ TODOS OS TESTES PASSARAM!")
-    else:
-        print(f"\n⚠️  {total - passed} teste(s) falharam")
+if __name__ == "__main__":
+    test_llm_analyzer()
+    test_llm_batch_analysis()

@@ -21,9 +21,9 @@ def create_test_config():
             "cache_file": "logs/query_cache.json",
             "max_hours": 24
         },
-        "gemini": {
-            "api_key": os.getenv('GEMINI_API_KEY', ''),
-            "model": "gemini-1.5-pro",
+        "llm": {
+            "api_key": os.getenv('GROQ_API_KEY', ''),
+            "model": "llama-3.3-70b-versatile",
             "temperature": 0.3
         },
         "teams": {

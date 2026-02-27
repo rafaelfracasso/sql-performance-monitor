@@ -8,6 +8,7 @@ from ..core.database_types import DatabaseType
 from ..factories.database_factory import DatabaseFactory
 from ..utils.query_sanitizer import QuerySanitizer
 from ..utils.llm_analyzer import LLMAnalyzer
+from ..utils.llm_providers import get_model_pricing
 from ..utils.currency import CurrencyConverter
 from ..utils.logger import PerformanceLogger
 from ..utils.performance_checker import PerformanceChecker
@@ -486,9 +487,13 @@ class DatabaseMonitor:
             prompt_tokens = 0
             completion_tokens = 0
 
-        llm_config = self.config.get('llm', {})
-        input_price = llm_config.get('input_price_per_million', 0.075)
-        output_price = llm_config.get('output_price_per_million', 0.30)
+        model_used = analysis.get('model_used', self.llm_analyzer.model_name) if isinstance(analysis, dict) else self.llm_analyzer.model_name
+        input_price, output_price = get_model_pricing(model_used)
+        if input_price == 0.0 and output_price == 0.0:
+            # Modelo não está na tabela: usa preços manuais do config como fallback
+            llm_config = self.config.get('llm', {})
+            input_price = llm_config.get('input_price_per_million', 0.0)
+            output_price = llm_config.get('output_price_per_million', 0.0)
 
         estimated_cost_usd = (
             (prompt_tokens / 1_000_000 * input_price) +

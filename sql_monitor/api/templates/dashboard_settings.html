@@ -322,7 +322,7 @@
     <div class="settings-card">
         <div class="settings-card-header">
             <div class="card-icon" style="background: #8b5cf6;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4c0 1.95-1.4 3.58-3.25 3.93L12 22"/><path d="M8 6a4 4 0 0 1 8 0"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z"/><path d="M5 3l.5 1.5L7 5l-1.5.5L5 7l-.5-1.5L3 5l1.5-.5L5 3z"/><path d="M19 13l.5 1.5L21 15l-1.5.5L19 17l-.5-1.5L17 15l1.5-.5L19 13z"/></svg>
             </div>
             <h4>Configuracao de LLM</h4>
         </div>
@@ -331,15 +331,16 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label>Provider</label>
-                        <select class="form-control" name="provider" required>
+                        <select class="form-control" name="provider" required onchange="SettingsManager.onProviderChange(this.value)">
+                            <option value="groq">Groq</option>
                             <option value="gemini">Google Gemini</option>
-                            <option value="openai">OpenAI GPT</option>
-                            <option value="anthropic">Anthropic Claude</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label>Model</label>
-                        <input type="text" class="form-control" name="model" placeholder="gemini-flash-latest" required>
+                        <select class="form-control" name="model" id="llm-model-select">
+                            <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>Temperature</label>
@@ -390,6 +391,7 @@
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Salvar Configuracao de LLM</button>
+                    <button type="button" class="btn btn-secondary" onclick="SettingsManager.resetLLMConfig()">Resetar para defaults</button>
                 </div>
             </form>
         </div>

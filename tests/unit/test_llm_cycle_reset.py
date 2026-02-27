@@ -1,4 +1,5 @@
 
+import os
 import pytest
 from unittest.mock import MagicMock, patch
 from sql_monitor.utils.llm_analyzer import LLMAnalyzer
@@ -12,8 +13,8 @@ class TestLLMCycleReset:
         """Verifica se o método reset_cycle_count zera o contador."""
         config = {'llm': {'rate_limit': {'max_requests_per_cycle': 10}}}
         
-        # Mock do genai.Client para evitar chamadas reais
-        with patch('google.genai.Client'):
+        # Mock do Groq para evitar chamadas reais
+        with patch('groq.Groq'), patch.dict(os.environ, {'GROQ_API_KEY': 'test-key'}):
             analyzer = LLMAnalyzer(config)
             
             # Simular uso
@@ -47,7 +48,6 @@ class TestLLMCycleReset:
             instance_name="TEST_DB",
             credentials={},
             config={'timeouts': {}},
-            cache=mock_cache,
             sanitizer=mock_sanitizer,
             llm_analyzer=mock_llm,
             logger=mock_logger,

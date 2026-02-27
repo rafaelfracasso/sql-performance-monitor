@@ -127,6 +127,43 @@ body {
     background-color: var(--bg-color);
 }
 
+/* Collector Timer */
+.collector-timer {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.3rem 0.6rem;
+    border-radius: 1rem;
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: default;
+    user-select: none;
+}
+
+.collector-timer svg {
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+@keyframes collector-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.collector-timer-pulse {
+    color: var(--warning-color);
+    border-color: var(--warning-color);
+    animation: collector-pulse 0.8s ease-in-out infinite;
+}
+
+.collector-timer-pulse svg {
+    opacity: 1;
+}
+
 /* Theme Toggle */
 .theme-toggle {
     background: none;
@@ -365,6 +402,7 @@ body {
 .severity-medium { background-color: var(--severity-medium-bg); color: var(--severity-medium-text); }
 .severity-high { background-color: var(--severity-high-bg); color: var(--severity-high-text); }
 .severity-critical { background-color: var(--severity-critical-bg); color: var(--severity-critical-text); }
+.severity-none { background-color: transparent; color: var(--text-secondary); font-weight: normal; }
 
 /* Buttons */
 .btn {

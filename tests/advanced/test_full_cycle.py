@@ -68,13 +68,13 @@ def test_full_monitoring_cycle():
         print("   ✓ QuerySanitizer criado")
 
         # LLM Analyzer (opcional)
-        api_key = os.getenv('GEMINI_API_KEY')
-        llm_enabled = api_key and api_key != 'your_gemini_api_key_here'
+        api_key = os.getenv('GROQ_API_KEY')
+        llm_enabled = api_key and api_key != 'your_groq_api_key_here'
 
         if llm_enabled:
             analyzer = LLMAnalyzer({
                 'api_key': api_key,
-                'model': 'gemini-2.0-flash-exp',
+                'model': 'llama-3.3-70b-versatile',
                 'max_tokens': 1500
             })
             print("   ✓ LLM Analyzer criado")

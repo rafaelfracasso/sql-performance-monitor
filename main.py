@@ -180,7 +180,7 @@ def main():
     print("MULTI-DATABASE PERFORMANCE MONITOR")
     print("=" * 80)
     print("Monitora SQL Server, PostgreSQL e SAP HANA simultaneamente")
-    print("Análise inteligente via Google Gemini LLM")
+    print("Analise inteligente via LLM (configure em /settings)")
     print("=" * 80 + "\n")
 
     # Inicializa monitor

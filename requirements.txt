@@ -4,7 +4,8 @@ psycopg2-binary>=2.9.0     # PostgreSQL
 hdbcli>=2.19.0             # SAP HANA
 
 # LLM Integration
-google-genai>=0.1.0
+groq>=0.8.0
+openai>=1.0.0              # cliente OpenAI-compatible para Gemini
 
 # SQL Parsing and Analysis
 sqlparse>=0.4.4

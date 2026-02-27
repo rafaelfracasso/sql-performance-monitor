@@ -552,53 +552,6 @@ const QueriesUI = {
         if (panel) panel.classList.toggle('show');
     },
 
-    toggleSelectAll() {
-        const master = document.getElementById('selectAll');
-        const checkboxes = document.querySelectorAll('.query-checkbox');
-        if (master) {
-            checkboxes.forEach(cb => cb.checked = master.checked);
-            this.updateBulkButton();
-        }
-    },
-
-    updateBulkButton() {
-        const selected = document.querySelectorAll('.query-checkbox:checked').length;
-        const btn = document.getElementById('btnBulkAnalyze');
-        const countSpan = document.getElementById('selectedCount');
-        
-        if (countSpan) countSpan.textContent = selected;
-        if (btn) btn.disabled = selected === 0;
-    },
-
-    async analyzeSelected() {
-        const selected = Array.from(document.querySelectorAll('.query-checkbox:checked'))
-            .map(cb => cb.value);
-            
-        if (selected.length === 0) return;
-        
-        if (!confirm(`Deseja analisar ${selected.length} queries com IA? Isso pode levar alguns minutos.`)) return;
-        
-        const btn = document.getElementById('btnBulkAnalyze');
-        const originalText = btn.innerHTML;
-        btn.disabled = true;
-        btn.innerHTML = 'Analisando...';
-        
-        try {
-            const result = await API.post('/analyze/bulk', { query_hashes: selected });
-            
-            Utils.showToast(`Analise concluida! ${result.results.filter(r => r.status === 'analyzed').length} queries analisadas.`, 'success');
-            location.reload();
-
-        } catch (error) {
-            console.error('Erro:', error);
-            Utils.showToast('Erro ao realizar analise em massa.', 'error');
-        } finally {
-            if (btn) {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        }
-    }
 };
 
 // Extend Dashboard with new methods
@@ -770,9 +723,6 @@ window.viewHotspotAlerts = (instance, database, table) => {
 };
 window.viewQueryDetails = (queryHash) => window.location.href = `/dashboard/queries/${queryHash}`;
 window.toggleAdvancedFilters = QueriesUI.toggleAdvancedFilters;
-window.toggleSelectAll = () => QueriesUI.toggleSelectAll(); // Bind 'this'
-window.updateBulkButton = QueriesUI.updateBulkButton;
-window.analyzeSelected = QueriesUI.analyzeSelected;
 window.exportData = (tableId, filename) => Dashboard.exportData(tableId, filename); // Generic export wrapper
 
 // === INITIALIZATION ===
