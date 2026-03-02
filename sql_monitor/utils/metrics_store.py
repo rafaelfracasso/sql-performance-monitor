@@ -429,8 +429,6 @@ class MetricsStore:
         id INTEGER PRIMARY KEY DEFAULT 1,
         enabled BOOLEAN NOT NULL DEFAULT TRUE,
         ttl_hours INTEGER NOT NULL DEFAULT 24,
-        cache_file VARCHAR(200) DEFAULT 'logs/query_cache.json',
-        auto_save_interval INTEGER DEFAULT 300,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_by VARCHAR(100) DEFAULT 'system'
     );
@@ -902,8 +900,8 @@ class MetricsStore:
 
             # Inserir configurações de Query Cache
             conn.execute("""
-                INSERT INTO query_cache_config (id, enabled, ttl_hours, cache_file, auto_save_interval)
-                SELECT 1, true, 24, 'logs/query_cache.json', 300
+                INSERT INTO query_cache_config (id, enabled, ttl_hours)
+                SELECT 1, true, 24
                 WHERE NOT EXISTS (SELECT 1 FROM query_cache_config WHERE id = 1)
             """)
 
@@ -1703,27 +1701,58 @@ class MetricsStore:
 
         cutoff = datetime.now() - timedelta(hours=hours)
 
-        sql = "SELECT * FROM performance_alerts WHERE alert_time >= ?"
+        filters = "WHERE alert_time >= ?"
         params = [cutoff]
 
         if instance_name:
-            sql += " AND instance_name = ?"
+            filters += " AND instance_name = ?"
             params.append(instance_name)
 
         if severity:
-            sql += " AND severity = ?"
+            filters += " AND severity = ?"
             params.append(severity)
 
         if database_name:
-            sql += " AND database_name = ?"
+            filters += " AND database_name = ?"
             params.append(database_name)
 
         if table_name:
-            sql += " AND table_name = ?"
+            filters += " AND table_name = ?"
             params.append(table_name)
 
-        sql += " ORDER BY alert_time DESC LIMIT ?"
+        # Deduplica por (query_hash, alert_type, instance, database):
+        # - dentro de cada grupo, prefere a linha com table_name nao nulo
+        # - em caso de empate, pega a mais recente
+        # - query_hash NULL (wait stats, blocking system) trata cada linha como unica
         params.append(limit)
+        sql = f"""
+            WITH ranked AS (
+                SELECT *,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY
+                            COALESCE(query_hash, CAST(id AS VARCHAR)),
+                            alert_type,
+                            instance_name,
+                            database_name
+                        ORDER BY
+                            CASE WHEN table_name IS NOT NULL AND table_name != '' THEN 0 ELSE 1 END,
+                            alert_time DESC
+                    ) AS _rn,
+                    COUNT(*) OVER (
+                        PARTITION BY
+                            COALESCE(query_hash, CAST(id AS VARCHAR)),
+                            alert_type,
+                            instance_name,
+                            database_name
+                    ) AS occurrence_count
+                FROM performance_alerts
+                {filters}
+            )
+            SELECT * EXCLUDE (_rn) FROM ranked
+            WHERE _rn = 1
+            ORDER BY alert_time DESC
+            LIMIT ?
+        """
 
         results = conn.execute(sql, params).fetchall()
 
@@ -2428,7 +2457,7 @@ class MetricsStore:
 
             # Query cache config
             result = self.execute_query("""
-                SELECT enabled, ttl_hours, cache_file, auto_save_interval
+                SELECT enabled, ttl_hours
                 FROM query_cache_config WHERE id = 1
             """)
             if result:
@@ -2436,8 +2465,6 @@ class MetricsStore:
                 config['query_cache'] = {
                     'enabled': r[0],
                     'ttl_hours': r[1],
-                    'cache_file': r[2],
-                    'auto_save_interval': r[3],
                     'comment': 'Cache de queries analisadas: TTL deslizantes, evita análises duplicadas pelo LLM'
                 }
 

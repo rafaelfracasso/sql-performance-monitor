@@ -215,7 +215,56 @@ class WeeklyOptimizationPlanner:
         # Priorizar otimizações por impacto
         plan['optimizations'] = self._prioritize_optimizations(plan['optimizations'])
 
+        # Deduplicar sugestoes de CREATE INDEX entre todos os itens do plano
+        plan['optimizations'] = self._dedup_index_suggestions(plan['optimizations'])
+
         return plan
+
+    def _extract_index_name(self, line: str) -> Optional[str]:
+        """
+        Extrai o nome do indice de uma linha CREATE INDEX.
+
+        Exemplo:
+          CREATE NONCLUSTERED INDEX IX_PSECAO_COD ON dbo.PSECAO ...  -> 'IX_PSECAO_COD'
+        """
+        import re
+        m = re.search(r'\bINDEX\s+(\w+)\s+ON\b', line, re.IGNORECASE)
+        return m.group(1).upper() if m else None
+
+    def _dedup_index_suggestions(
+        self,
+        optimizations: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Remove sugestoes de CREATE INDEX duplicadas entre todos os itens do plano.
+
+        Itera os itens em ordem de prioridade (ja ordenados). Quando encontra um
+        CREATE INDEX com nome que ja foi visto em um item anterior, remove a linha
+        do item atual. Funciona tanto em 'llm_recommendations' quanto em 'sql_script'.
+        """
+        seen_indexes: set = set()
+
+        for opt in optimizations:
+            for field in ('llm_recommendations', 'llm_analysis', 'sql_script'):
+                text = opt.get(field) or ''
+                if not text:
+                    continue
+                filtered = []
+                for line in text.split('\n'):
+                    stripped = line.strip()
+                    upper = stripped.upper()
+                    # Apenas linhas reais de CREATE INDEX (nao comentarios)
+                    if (upper.startswith('CREATE') and 'INDEX' in upper
+                            and not stripped.startswith('--')):
+                        idx_name = self._extract_index_name(stripped)
+                        if idx_name:
+                            if idx_name in seen_indexes:
+                                continue  # descarta duplicata
+                            seen_indexes.add(idx_name)
+                    filtered.append(line)
+                opt[field] = '\n'.join(filtered).strip()
+
+        return optimizations
 
     def _find_frequent_slow_queries(self, instance_name: str) -> List[Dict[str, Any]]:
         """
@@ -250,6 +299,11 @@ class WeeklyOptimizationPlanner:
             LEFT JOIN llm_analyses la ON qc.query_hash = la.query_hash
             WHERE qc.instance_name = ?
               AND qc.collected_at >= ?
+              AND qc.table_name IS NOT NULL
+              AND qc.table_name != ''
+              AND UPPER(qc.table_name) NOT IN ('DBO', 'SYS', 'INFORMATION_SCHEMA', 'GUEST')
+              AND qc.table_name != qc.database_name
+              AND qc.table_name != qc.schema_name
             GROUP BY qc.query_hash, qc.database_name, qc.schema_name, qc.table_name,
                      qc.sanitized_query, la.severity, la.recommendations, la.analysis_text
             HAVING COUNT(DISTINCT qc.id) >= ?
@@ -288,7 +342,9 @@ class WeeklyOptimizationPlanner:
         cutoff = datetime.now() - timedelta(days=self.analysis_days)
         conn = self.metrics_store._get_connection()
 
-        # Queries com table scan ou muitas leituras, cruzando com metadados de tamanho
+        # Queries com table scan ou muitas leituras, cruzando com metadados de tamanho.
+        # Exclui entradas com table_name invalido (NULL, vazio, igual ao schema ou database,
+        # ou nomes de sistema como dbo/sys) que indicam parsing incorreto na coleta.
         results = conn.execute("""
             SELECT
                 qc.database_name,
@@ -301,13 +357,18 @@ class WeeklyOptimizationPlanner:
                 MAX(tm.total_size_mb) as total_size_mb
             FROM queries_collected qc
             JOIN query_metrics qm ON qc.query_hash = qm.query_hash AND qc.collected_at = qm.collected_at
-            LEFT JOIN table_metadata tm ON qc.instance_name = tm.instance_name 
-                                       AND qc.database_name = tm.database_name 
-                                       AND qc.schema_name = tm.schema_name 
+            LEFT JOIN table_metadata tm ON qc.instance_name = tm.instance_name
+                                       AND qc.database_name = tm.database_name
+                                       AND qc.schema_name = tm.schema_name
                                        AND qc.table_name = tm.table_name
             WHERE qc.instance_name = ?
               AND qc.collected_at >= ?
               AND (qc.query_type = 'table_scan' OR qm.logical_reads > 50000)
+              AND qc.table_name IS NOT NULL
+              AND qc.table_name != ''
+              AND UPPER(qc.table_name) NOT IN ('DBO', 'SYS', 'INFORMATION_SCHEMA', 'GUEST')
+              AND qc.table_name != qc.database_name
+              AND qc.table_name != qc.schema_name
             GROUP BY qc.database_name, qc.schema_name, qc.table_name
             HAVING query_count >= 3
             ORDER BY (query_count * avg_reads) DESC
@@ -357,6 +418,11 @@ class WeeklyOptimizationPlanner:
             FROM queries_collected qc
             WHERE qc.instance_name = ?
               AND qc.collected_at >= ?
+              AND qc.table_name IS NOT NULL
+              AND qc.table_name != ''
+              AND UPPER(qc.table_name) NOT IN ('DBO', 'SYS', 'INFORMATION_SCHEMA', 'GUEST')
+              AND qc.table_name != qc.database_name
+              AND qc.table_name != qc.schema_name
             GROUP BY qc.database_name, qc.schema_name, qc.table_name
             HAVING problem_query_count >= 5
             ORDER BY problem_query_count DESC
@@ -472,27 +538,39 @@ class WeeklyOptimizationPlanner:
         avg_cpu = round(query_info.get('avg_cpu_ms', 0))
         avg_reads = round(query_info.get('avg_logical_reads', 0))
 
-        rec_lines = ''
+        def _is_linked_server_index(line_stripped: str) -> bool:
+            """Detecta CREATE INDEX em tabela de linked server (notacao server..db.table)."""
+            u = line_stripped.upper()
+            return u.startswith('CREATE') and 'INDEX' in u and '..' in line_stripped
+
+        # Extrai apenas linhas SQL executaveis das recomendacoes do LLM,
+        # excluindo sugestoes em tabelas de linked server (notacao com ".." duplo).
+        sql_lines = []
         if recommendations:
             for line in str(recommendations).split('\n'):
-                rec_lines += f"-- {line}\n"
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                upper = stripped.upper()
+                is_sql = any(upper.startswith(kw) for kw in (
+                    'CREATE ', 'ALTER ', 'DROP ', 'UPDATE ', 'INSERT ',
+                    'DELETE ', 'EXEC ', 'EXECUTE ', 'WITH ', 'SELECT '
+                ))
+                if is_sql and not _is_linked_server_index(stripped):
+                    sql_lines.append(stripped)
 
-        sql_script = (
-            f"-- Query Hash: {query_hash}\n"
-            f"-- Duracao media: {avg_ms}ms | CPU: {avg_cpu}ms | Leituras: {avg_reads}\n"
-            f"-- Ocorrencias: {occ}/semana\n"
-            f"--\n"
-            f"-- QUERY ORIGINAL:\n"
-            f"-- {sanitized[:2000]}\n"
-            f"--\n"
-        )
-        if rec_lines:
-            sql_script += (
-                f"-- RECOMENDACOES DA IA:\n"
-                f"{rec_lines}"
-                f"--\n"
-            )
-        sql_script += "-- ACAO: Revisar e reescrever conforme recomendacoes acima\n"
+        sql_script = '\n'.join(sql_lines) if sql_lines else ''
+
+        def _filter_linked_server(text: str) -> str:
+            """Remove linhas de CREATE INDEX em linked server do texto."""
+            lines = []
+            for ln in str(text).split('\n'):
+                if not _is_linked_server_index(ln.strip()):
+                    lines.append(ln)
+            return '\n'.join(lines).strip()
+
+        filtered_recommendations = _filter_linked_server(recommendations)
+        filtered_analysis = _filter_linked_server(query_info.get('analysis') or '')
 
         return {
             'type': 'query_optimization',
@@ -511,8 +589,8 @@ class WeeklyOptimizationPlanner:
             'estimated_improvement_percent': 50,
             'estimated_time_saved_hours': round(impact_hours, 2),
             'severity': query_info['severity'] or 'medium',
-            'llm_recommendations': query_info['recommendations'],
-            'llm_analysis': query_info['analysis'],
+            'llm_recommendations': filtered_recommendations,
+            'llm_analysis': filtered_analysis,
             'action_required': 'review_and_rewrite',
             'notes': 'Revisar analise LLM e aplicar recomendacoes'
         }
@@ -675,23 +753,44 @@ class WeeklyOptimizationPlanner:
         optimizations: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """
-        Ordena otimizações por prioridade e impacto.
+        Ordena otimizações por prioridade e impacto, removendo duplicatas.
 
-        Args:
-            optimizations: Lista de otimizações
-
-        Returns:
-            Lista ordenada
+        Deduplicacao:
+          - query_optimization: chave = query_hash
+          - create_index / update_statistics: chave = (type, database, schema, table)
+          - outros: sem dedup
         """
         priority_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
 
-        return sorted(
+        sorted_opts = sorted(
             optimizations,
             key=lambda x: (
                 priority_order.get(x.get('priority', 'low'), 3),
                 -x.get('estimated_improvement_percent', 0)
             )
         )
+
+        seen: set = set()
+        deduped = []
+        for opt in sorted_opts:
+            opt_type = opt.get('type', '')
+            if opt_type == 'query_optimization':
+                key = ('query_optimization', opt.get('query_hash', id(opt)))
+            elif opt_type in ('create_index', 'update_statistics'):
+                key = (
+                    opt_type,
+                    opt.get('database_name', ''),
+                    opt.get('schema_name', ''),
+                    opt.get('table_name', '')
+                )
+            else:
+                key = id(opt)
+
+            if key not in seen:
+                seen.add(key)
+                deduped.append(opt)
+
+        return deduped
 
     def _calculate_plan_summary(self, plan: Dict[str, Any]) -> Dict[str, Any]:
         """

@@ -718,7 +718,11 @@ window.viewHotspotAlerts = (instance, database, table) => {
     const params = new URLSearchParams(window.location.search);
     params.set('instance', instance);
     params.set('database', database);
-    params.set('table', table);
+    if (table && table !== 'None' && table !== 'null') {
+        params.set('table', table);
+    } else {
+        params.delete('table');
+    }
     window.location.href = `/dashboard/alerts?${params.toString()}`;
 };
 window.viewQueryDetails = (queryHash) => window.location.href = `/dashboard/queries/${queryHash}`;

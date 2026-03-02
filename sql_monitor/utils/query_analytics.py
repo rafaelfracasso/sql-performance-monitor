@@ -986,23 +986,47 @@ class QueryAnalytics:
         where_sql = " AND ".join(where_clauses)
 
         query = f"""
+            WITH enriched AS (
+                SELECT
+                    pa.instance_name,
+                    pa.database_name,
+                    pa.severity,
+                    pa.alert_time,
+                    pa.alert_type,
+                    pa.query_hash,
+                    COALESCE(
+                        NULLIF(pa.table_name, ''),
+                        (
+                            SELECT pa2.table_name
+                            FROM performance_alerts pa2
+                            WHERE pa2.query_hash = pa.query_hash
+                              AND pa2.query_hash IS NOT NULL
+                              AND pa2.table_name IS NOT NULL
+                              AND pa2.table_name != ''
+                            ORDER BY pa2.alert_time DESC
+                            LIMIT 1
+                        )
+                    ) AS table_name
+                FROM performance_alerts pa
+                WHERE {where_sql}
+            )
             SELECT
-                pa.instance_name,
-                pa.database_name,
-                pa.table_name,
+                instance_name,
+                database_name,
+                table_name,
                 COUNT(*) as total_alerts,
-                COUNT(*) FILTER (WHERE pa.severity = 'critical') as critical_count,
-                COUNT(*) FILTER (WHERE pa.severity = 'high') as high_count,
-                COUNT(*) FILTER (WHERE pa.severity = 'medium') as medium_count,
-                COUNT(*) FILTER (WHERE pa.severity = 'low') as low_count,
-                COUNT(DISTINCT pa.query_hash) as affected_queries,
-                MAX(pa.alert_time) as last_alert,
-                STRING_AGG(DISTINCT pa.alert_type, ', ') as alert_types
-            FROM performance_alerts pa
-            WHERE {where_sql}
-            GROUP BY pa.instance_name, pa.database_name, pa.table_name
+                COUNT(*) FILTER (WHERE severity = 'critical') as critical_count,
+                COUNT(*) FILTER (WHERE severity = 'high') as high_count,
+                COUNT(*) FILTER (WHERE severity = 'medium') as medium_count,
+                COUNT(*) FILTER (WHERE severity = 'low') as low_count,
+                COUNT(DISTINCT query_hash) as affected_queries,
+                MAX(alert_time) as last_alert,
+                STRING_AGG(DISTINCT alert_type, ', ') as alert_types
+            FROM enriched
+            WHERE table_name IS NOT NULL AND table_name != ''
+            GROUP BY instance_name, database_name, table_name
             HAVING total_alerts >= ?
-            ORDER BY total_alerts DESC, critical_count DESC, high_count DESC, pa.instance_name, pa.table_name
+            ORDER BY total_alerts DESC, critical_count DESC, high_count DESC, instance_name, table_name
         """
 
         results = conn.execute(query, params + [min_alerts]).fetchall()

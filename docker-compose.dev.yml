@@ -1,0 +1,28 @@
+services:
+  sql-monitor:
+    build: .
+    image: sql-monitor:dev
+    container_name: sql-monitor-dev
+    ports:
+      - "8080:8080"
+    networks:
+      - sqlmonitor-dev
+    volumes:
+      - ./config.json:/app/config.json:ro
+      - ./config:/app/config:ro
+      - ./.env:/app/.env:ro
+      # Logs e DuckDB no diretorio local para inspecao facil
+      - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TZ=America/Cuiaba
+    restart: "no"
+
+networks:
+  sqlmonitor-dev:
+    driver: bridge
+    ipam:
+      config:
+        # Subnet isolada que nao conflita com 172.20.x.x (SQL Server) nem 172.25.x.x (WSL2)
+        - subnet: 192.168.220.0/24
+          gateway: 192.168.220.1

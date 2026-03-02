@@ -190,16 +190,6 @@ class QueryCacheConfig(BaseModel):
         le=168,  # 1 semana
         description="Time to live em horas"
     )
-    cache_file: str = Field(
-        default="logs/query_cache.json",
-        description="Caminho do arquivo de cache"
-    )
-    auto_save_interval: int = Field(
-        default=300,
-        ge=60,
-        le=3600,
-        description="Intervalo de auto-save em segundos"
-    )
 
 
 class TeamsConfig(BaseModel):

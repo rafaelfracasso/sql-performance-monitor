@@ -1,0 +1,48 @@
+# Ambiente virtual
+.venv/
+venv/
+env/
+
+# Dados locais (montados como volume no container)
+logs/
+sql_monitor_data/
+
+# Git
+.git/
+.gitignore
+
+# Claude / AI
+.claude/
+.ai-factory/
+.mcp.json
+
+# Credenciais reais (nunca empacotar na imagem)
+.env
+config/databases.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testes
+tests/
+
+# Scripts de setup local
+start.sh
+scripts/

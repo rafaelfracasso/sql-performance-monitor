@@ -244,8 +244,6 @@ class QueryCacheConfigRequest(BaseModel):
     """Configuracao de query cache."""
     enabled: Optional[bool] = None
     ttl_hours: Optional[int] = Field(None, ge=1, le=8760)
-    cache_file: Optional[str] = Field(None, max_length=500)
-    auto_save_interval: Optional[int] = Field(None, ge=30, le=86400)
 
 
 class LoggingConfigRequest(BaseModel):

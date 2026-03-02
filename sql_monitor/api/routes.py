@@ -697,6 +697,14 @@ async def dashboard_alerts(
 
     period_hours = PERIOD_MAP.get(period, 24)
 
+    # Sanitizar params que podem chegar como string "None" via URL
+    if table in ("None", "null", ""):
+        table = None
+    if database in ("None", "null", ""):
+        database = None
+    if instance in ("None", "null", ""):
+        instance = None
+
     # Buscar alertas filtrados para a lista
     alerts = analytics.get_recent_alerts(
         instance_name=instance,
@@ -2177,7 +2185,7 @@ async def get_query_cache_config():
         raise HTTPException(status_code=503, detail="MetricsStore não inicializado")
 
     result = metrics_store.execute_query("""
-        SELECT enabled, ttl_hours, cache_file, auto_save_interval, updated_at, updated_by
+        SELECT enabled, ttl_hours, updated_at, updated_by
         FROM query_cache_config WHERE id = 1
     """)
 
@@ -2188,10 +2196,8 @@ async def get_query_cache_config():
     return {
         "enabled": r[0],
         "ttl_hours": r[1],
-        "cache_file": r[2],
-        "auto_save_interval": r[3],
-        "updated_at": r[4],
-        "updated_by": r[5]
+        "updated_at": r[2],
+        "updated_by": r[3]
     }
 
 
@@ -2208,16 +2214,12 @@ async def update_query_cache_config(config: QueryCacheConfigRequest):
         UPDATE query_cache_config SET
             enabled = ?,
             ttl_hours = ?,
-            cache_file = ?,
-            auto_save_interval = ?,
             updated_at = CURRENT_TIMESTAMP,
             updated_by = 'api_user'
         WHERE id = 1
     """, (
         config.enabled,
-        config.ttl_hours,
-        config.cache_file,
-        config.auto_save_interval
+        config.ttl_hours
     ))
 
     metrics_store.execute("""

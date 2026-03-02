@@ -181,6 +181,7 @@
                 {% endif %}
 
                 <!-- SQL Script -->
+                {% if opt.sql_script %}
                 <div class="optimization-sql">
                     <div class="sql-header">
                         <strong>Script SQL sugerido:</strong>
@@ -188,6 +189,7 @@
                     </div>
                     <pre id="sql-{{ opt.id }}"><code>{{ opt.sql_script }}</code></pre>
                 </div>
+                {% endif %}
 
                 {% if opt.rollback_script %}
                 <div class="optimization-sql">

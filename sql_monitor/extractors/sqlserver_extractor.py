@@ -28,28 +28,58 @@ class SQLServerExtractor(BaseMetadataExtractor):
         Returns:
             Lista de dicts com schema e nome da tabela.
         """
-        # Regex para capturar [schema].[table] ou table
-        pattern = r'\b(?:FROM|JOIN|INTO|UPDATE|DELETE\s+FROM)\s+(?:\[?(\w+)\]?\.)?\[?(\w+)\]?'
-        matches = re.findall(pattern, query_text, re.IGNORECASE)
+        skip = {'SELECT', 'WHERE', 'INNER', 'LEFT', 'RIGHT', 'OUTER', 'CROSS', 'SET', 'TOP'}
 
-        tables = []
-        for schema, table in matches:
-            if table.upper() not in ('SELECT', 'WHERE', 'INNER', 'LEFT', 'RIGHT', 'OUTER', 'CROSS'):
-                tables.append({
-                    'schema': schema if schema else 'dbo',
-                    'table': table
-                })
+        # Captura até 3 partes: [db].[schema].[table], [schema].[table] ou [table]
+        # Grupos: (part1, part2, part3) onde part3 é sempre a tabela.
+        # Se part1 e part2 presentes: part1=db, part2=schema, part3=table
+        # Se só part1:               part1=schema, part3=table
+        # Nenhum:                    part3=table, schema='dbo'
+        THREE_PART = r'\[?(\w+)\]?\.\[?(\w+)\]?\.\[?(\w+)\]?'
+        TWO_PART   = r'\[?(\w+)\]?\.\[?(\w+)\]?'
+        ONE_PART   = r'\[?(\w+)\]?'
 
-        # Remove duplicatas
-        unique_tables = []
-        seen = set()
-        for table in tables:
-            key = f"{table['schema']}.{table['table']}"
-            if key not in seen:
-                seen.add(key)
-                unique_tables.append(table)
+        def _parse_ref(text, keyword_pat):
+            """Extrai referências de tabela após keyword_pat, suportando 1, 2 e 3 partes."""
+            results = []
+            full_pat = rf'\b{keyword_pat}\s+(?:{THREE_PART}|{TWO_PART}|{ONE_PART})'
+            for m in re.finditer(full_pat, text, re.IGNORECASE):
+                g = m.groups()  # (p1,p2,p3, p4,p5, p6)
+                if g[0] and g[1] and g[2]:        # [db].[schema].[table]
+                    schema, table = g[1], g[2]
+                elif g[3] and g[4]:               # [schema].[table]
+                    schema, table = g[3], g[4]
+                elif g[5]:                        # [table]
+                    schema, table = 'dbo', g[5]
+                else:
+                    continue
+                if table.upper() not in skip:
+                    results.append({'schema': schema, 'table': table})
+            return results
 
-        return unique_tables
+        def _dedupe(lst):
+            seen, out = set(), []
+            for t in lst:
+                key = f"{t['schema']}.{t['table']}"
+                if key not in seen:
+                    seen.add(key)
+                    out.append(t)
+            return out
+
+        normalized = ' '.join(query_text.split())
+
+        # Para UPDATE com FROM: a tabela real está no FROM (pode ser UPDATE alias)
+        if re.match(r'(?i)\s*UPDATE\b', normalized):
+            from_tables = _parse_ref(normalized, 'FROM')
+            if from_tables:
+                return _dedupe(from_tables)
+            return _dedupe(_parse_ref(normalized, 'UPDATE'))
+
+        # SELECT, INSERT, DELETE
+        results = []
+        for kw in (r'FROM', r'JOIN', r'INTO', r'DELETE\s+FROM'):
+            results.extend(_parse_ref(query_text, kw))
+        return _dedupe(results)
 
     def get_table_ddl(self, database_name: str, schema_name: str, table_name: str) -> Optional[str]:
         """

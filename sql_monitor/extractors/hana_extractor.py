@@ -28,9 +28,6 @@ class HANAExtractor(BaseMetadataExtractor):
         Returns:
             Lista de dicts com schema e nome da tabela.
         """
-        tables = []
-
-        # Palavras reservadas e tabelas do sistema a ignorar
         ignored = {
             'SELECT', 'WHERE', 'INNER', 'LEFT', 'RIGHT', 'OUTER', 'CROSS',
             'DUMMY', 'DUAL', 'AND', 'OR', 'ON', 'AS', 'SET', 'VALUES',
@@ -39,53 +36,51 @@ class HANAExtractor(BaseMetadataExtractor):
             'SYS', 'SYSTEM', 'PUBLIC'
         }
 
-        # Normalizar query - remover quebras de linha extras
+        W = r'[A-Za-z_][A-Za-z0-9_]*'
+        # Grupos: (db, schema, table) | (schema, table) | (table)
+        THREE = rf'"?({W})"?\s*\.\s*"?({W})"?\s*\.\s*"?({W})"?'
+        TWO   = rf'"?({W})"?\s*\.\s*"?({W})"?'
+        ONE   = rf'"?({W})"?'
+
         normalized = ' '.join(query_text.split())
 
-        # Padrao 1: schema.table com ou sem aspas
-        # Exemplos: "SCHEMA"."TABLE", SCHEMA.TABLE, "SCHEMA".TABLE
-        pattern1 = r'(?:FROM|JOIN|INTO|UPDATE)\s+"?([A-Za-z_][A-Za-z0-9_]*)"?\s*\.\s*"?([A-Za-z_][A-Za-z0-9_]*)"?'
-        for match in re.finditer(pattern1, normalized, re.IGNORECASE):
-            schema, table = match.groups()
-            if table.upper() not in ignored and schema.upper() not in ignored:
-                tables.append({'schema': schema, 'table': table})
-
-        # Padrao 2: apenas tabela (sem schema) apos FROM/JOIN/INTO/UPDATE
-        # Exemplos: FROM TABLE, JOIN "TABLE"
-        pattern2 = r'(?:FROM|JOIN|INTO|UPDATE)\s+"?([A-Za-z_][A-Za-z0-9_]*)"?(?:\s|$|,|\()'
-        for match in re.finditer(pattern2, normalized, re.IGNORECASE):
-            table = match.group(1)
-            # Verificar se nao e parte de schema.table (ja capturado acima)
-            start = match.start()
-            prefix = normalized[:start]
-            if table.upper() not in ignored and not prefix.rstrip().endswith('.'):
-                # Verificar se o proximo char nao e ponto (seria schema)
-                end = match.end()
-                if end < len(normalized) and normalized[end-1:end+1].strip().startswith('.'):
+        def _parse_ref(text, keyword_pat):
+            results = []
+            full_pat = rf'\b{keyword_pat}\s+(?:{THREE}|{TWO}|{ONE})'
+            for m in re.finditer(full_pat, text, re.IGNORECASE):
+                g = m.groups()  # (p1,p2,p3, p4,p5, p6)
+                if g[0] and g[1] and g[2]:        # db.schema.table
+                    schema, table = g[1], g[2]
+                elif g[3] and g[4]:               # schema.table
+                    schema, table = g[3], g[4]
+                elif g[5]:                        # table
+                    schema, table = 'PUBLIC', g[5]
+                else:
                     continue
-                tables.append({'schema': 'PUBLIC', 'table': table})
+                if table.upper() not in ignored and schema.upper() not in ignored:
+                    results.append({'schema': schema, 'table': table})
+            return results
 
-        # Padrao 3: DELETE FROM schema.table ou DELETE FROM table
-        pattern3 = r'DELETE\s+FROM\s+"?([A-Za-z_][A-Za-z0-9_]*)"?(?:\s*\.\s*"?([A-Za-z_][A-Za-z0-9_]*)"?)?'
-        for match in re.finditer(pattern3, normalized, re.IGNORECASE):
-            part1, part2 = match.groups()
-            if part2:  # schema.table
-                if part2.upper() not in ignored:
-                    tables.append({'schema': part1, 'table': part2})
-            else:  # apenas table
-                if part1.upper() not in ignored:
-                    tables.append({'schema': 'PUBLIC', 'table': part1})
+        def _dedupe(lst):
+            seen, out = set(), []
+            for t in lst:
+                key = f"{t['schema'].upper()}.{t['table'].upper()}"
+                if key not in seen:
+                    seen.add(key)
+                    out.append(t)
+            return out
 
-        # Remove duplicatas mantendo ordem
-        unique_tables = []
-        seen = set()
-        for table in tables:
-            key = f"{table['schema'].upper()}.{table['table'].upper()}"
-            if key not in seen:
-                seen.add(key)
-                unique_tables.append(table)
+        # Para UPDATE com FROM: a tabela real está no FROM (target pode ser alias)
+        if re.match(r'(?i)\s*UPDATE\b', normalized):
+            from_tables = _parse_ref(normalized, 'FROM')
+            if from_tables:
+                return _dedupe(from_tables)
+            return _dedupe(_parse_ref(normalized, 'UPDATE'))
 
-        return unique_tables
+        results = []
+        for kw in (r'FROM', r'JOIN', r'INTO', r'DELETE\s+FROM'):
+            results.extend(_parse_ref(normalized, kw))
+        return _dedupe(results)
 
     def get_table_ddl(self, database_name: str, schema_name: str, table_name: str) -> Optional[str]:
         """

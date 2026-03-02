@@ -1,0 +1,36 @@
+services:
+  sql-monitor:
+    build: .
+    image: sql-monitor:latest
+    container_name: sql-monitor
+    ports:
+      - "8080:8080"
+    networks:
+      - sqlmonitor-prod
+    volumes:
+      - ./config.json:/app/config.json:ro
+      - ./config:/app/config:ro
+      - ./.env:/app/.env:ro
+      # Dados persistidos em volume nomeado (DuckDB + logs)
+      - sql_monitor_logs:/app/logs
+    environment:
+      - TZ=America/Cuiaba
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+networks:
+  sqlmonitor-prod:
+    driver: bridge
+    ipam:
+      config:
+        # Subnet isolada que nao conflita com redes de producao (172.20.x.x, 172.25.x.x)
+        - subnet: 192.168.221.0/24
+          gateway: 192.168.221.1
+
+volumes:
+  sql_monitor_logs:
