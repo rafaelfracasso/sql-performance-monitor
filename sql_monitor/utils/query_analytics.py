@@ -274,7 +274,8 @@ class QueryAnalytics:
             'severity',
             'cpu_time_ms', 'duration_ms', 'logical_reads', 'physical_reads',
             'writes', 'wait_time_ms', 'memory_mb',
-            'total_cpu_impact', 'total_duration_impact'
+            'total_cpu_impact', 'total_duration_impact',
+            'execution_count'
         }
         if metric not in VALID_METRICS:
             raise ValueError(f"Metrica invalida: {metric}. Use uma de: {', '.join(VALID_METRICS)}")
@@ -446,6 +447,7 @@ class QueryAnalytics:
                 "GREATEST(cp.llm_severity_num, COALESCE(cp.alert_severity_num, 0)) DESC, cp.avg_cpu_time_ms" if metric == "severity"
                 else "total_cpu_impact" if metric == "total_cpu_impact"
                 else "total_duration_impact" if metric == "total_duration_impact"
+                else "occurrences" if metric == "execution_count"
                 else f"avg_{metric}"
             } DESC
             LIMIT ? OFFSET ?

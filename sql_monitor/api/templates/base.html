@@ -42,14 +42,14 @@
                     <a href="/dashboard/alerts" class="nav-link {% if 'alerts' in request.url.path %}active{% endif %}">Alertas</a>
 
                     <div class="nav-dropdown">
-                        <a href="#" class="nav-link">Analise &#9662;</a>
+                        <a href="#" class="nav-link {% if '/applications' in request.url.path or '/users' in request.url.path or '/hosts' in request.url.path or '/trends' in request.url.path or '/llm' in request.url.path or '/duckdb' in request.url.path %}dropdown-active{% endif %}">Analise &#9662;</a>
                         <div class="nav-dropdown-menu">
-                            <a href="/dashboard/applications">Aplicacoes</a>
-                            <a href="/dashboard/users">Usuarios</a>
-                            <a href="/dashboard/hosts">Hosts</a>
-                            <a href="/dashboard/trends">Tendencias</a>
-                            <a href="/dashboard/llm">Metricas LLM</a>
-                            <a href="/dashboard/duckdb">Status DuckDB</a>
+                            <a href="/dashboard/applications" class="{% if 'applications' in request.url.path %}active{% endif %}">Aplicacoes</a>
+                            <a href="/dashboard/users" class="{% if '/users' in request.url.path %}active{% endif %}">Usuarios</a>
+                            <a href="/dashboard/hosts" class="{% if '/hosts' in request.url.path %}active{% endif %}">Hosts</a>
+                            <a href="/dashboard/trends" class="{% if '/trends' in request.url.path %}active{% endif %}">Tendencias</a>
+                            <a href="/dashboard/llm" class="{% if '/llm' in request.url.path %}active{% endif %}">Metricas LLM</a>
+                            <a href="/dashboard/duckdb" class="{% if '/duckdb' in request.url.path %}active{% endif %}">Status DuckDB</a>
                         </div>
                     </div>
 

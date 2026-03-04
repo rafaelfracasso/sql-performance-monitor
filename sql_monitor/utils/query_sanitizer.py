@@ -64,7 +64,11 @@ class QuerySanitizer:
         self.placeholder_map = {}
 
         # Parse SQL
-        parsed = sqlparse.parse(query)
+        try:
+            parsed = sqlparse.parse(query)
+        except Exception:
+            # Query muito grande para o sqlparse (limite de 10000 tokens)
+            return query, {}
         if not parsed:
             return query, {}
 

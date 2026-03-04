@@ -557,8 +557,18 @@ class LLMAnalyzer:
                 last_error = e
                 error_str = str(e)
 
-                # Verifica se é erro 429 (quota exhausted)
-                is_quota_error = '429' in error_str or 'RESOURCE_EXHAUSTED' in error_str or 'quota exceeded' in error_str.lower()
+                # Verifica se é erro de tokens excedidos (prompt muito grande) - nao conta para circuit breaker
+                is_token_limit_error = ('maximum number of tokens exceeded' in error_str.lower() or
+                                        'context_length_exceeded' in error_str.lower() or
+                                        'maximum context length' in error_str.lower())
+                if is_token_limit_error:
+                    print(f"   ✗ Prompt excede limite de tokens do provider: {error_str[:200]}")
+                    break  # Nao tenta novamente - o prompt nao vai diminuir sozinho
+
+                # Verifica se é erro 429 ou 413 (quota/payload too large)
+                is_quota_error = ('429' in error_str or '413' in error_str or
+                                  'RESOURCE_EXHAUSTED' in error_str or 'quota exceeded' in error_str.lower() or
+                                  'rate_limit_exceeded' in error_str)
 
                 if is_quota_error:
                     print(f"   🚫 QUOTA DA API ESGOTADA!")
@@ -692,6 +702,16 @@ class LLMAnalyzer:
         # Obter templates do JSON
         base_template = self.prompts.get('base_prompt_template', '')
         task_instructions = self.prompts.get('task_instructions', '')
+
+        # Truncar DDL e indexes para nao exceder o limite de tokens do provider.
+        # DDL grande demais gera HTTP 413 no Groq (limite de 12k TPM no on-demand).
+        # Preferimos analise parcial a nenhuma analise.
+        MAX_DDL_CHARS = 3000
+        MAX_INDEXES_CHARS = 1500
+        if len(ddl) > MAX_DDL_CHARS:
+            ddl = ddl[:MAX_DDL_CHARS] + "\n-- [DDL truncado]"
+        if len(indexes) > MAX_INDEXES_CHARS:
+            indexes = indexes[:MAX_INDEXES_CHARS] + "\n-- [truncado]"
 
         # Construir prompt base
         prompt = base_template.format(

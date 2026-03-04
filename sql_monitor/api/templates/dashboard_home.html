@@ -40,8 +40,8 @@
 <!-- Cards de Metricas Principais -->
 <div class="metrics-grid">
     <div class="metric-card">
-        <div style="display:flex; align-items:flex-start; gap:1rem;">
-            <div style="color:var(--primary-color); flex-shrink:0; margin-top:0.25rem;">
+        <div class="metric-card-body">
+            <div class="metric-icon">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             </div>
             <div>
@@ -58,8 +58,8 @@
     </div>
 
     <div class="metric-card">
-        <div style="display:flex; align-items:flex-start; gap:1rem;">
-            <div style="color:#8b5cf6; flex-shrink:0; margin-top:0.25rem;">
+        <div class="metric-card-body">
+            <div class="metric-icon" style="color:#8b5cf6;">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.912 5.813a2 2 0 0 0 1.275 1.275L21 12l-5.813 1.912a2 2 0 0 0-1.275 1.275L12 21l-1.912-5.813a2 2 0 0 0-1.275-1.275L3 12l5.813-1.912a2 2 0 0 0 1.275-1.275L12 3z"/></svg>
             </div>
             <div>
@@ -76,8 +76,8 @@
     </div>
 
     <div class="metric-card">
-        <div style="display:flex; align-items:flex-start; gap:1rem;">
-            <div style="color:var(--warning-color); flex-shrink:0; margin-top:0.25rem;">
+        <div class="metric-card-body">
+            <div class="metric-icon" style="color:var(--warning-color);">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
             <div>
@@ -91,8 +91,8 @@
     </div>
 
     <div class="metric-card {% if health.success_rate_percent >= 95 %}metric-success{% elif health.success_rate_percent >= 80 %}metric-warning{% else %}metric-error{% endif %}">
-        <div style="display:flex; align-items:flex-start; gap:1rem;">
-            <div style="color:{% if health.success_rate_percent >= 95 %}var(--success-color){% elif health.success_rate_percent >= 80 %}var(--warning-color){% else %}var(--error-color){% endif %}; flex-shrink:0; margin-top:0.25rem;">
+        <div class="metric-card-body">
+            <div class="metric-icon" style="color:{% if health.success_rate_percent >= 95 %}var(--success-color){% elif health.success_rate_percent >= 80 %}var(--warning-color){% else %}var(--error-color){% endif %};">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             </div>
             <div>

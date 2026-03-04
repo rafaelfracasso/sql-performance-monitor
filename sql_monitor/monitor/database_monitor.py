@@ -758,8 +758,12 @@ class DatabaseMonitor:
         if hasattr(self.collector, 'get_blocking_sessions'):
             try:
                 blocks = self.collector.get_blocking_sessions()
+                thresholds_blk = self.metrics_store.get_thresholds(self.db_type.value) if self.metrics_store else {}
+                min_blocking_wait_s = thresholds_blk.get('wait_time_ms', 5000) / 1000
                 for block in blocks:
                     wait_seconds = float(block.get('wait_time_seconds', 0))
+                    if wait_seconds < min_blocking_wait_s:
+                        continue
                     severity = 'critical' if wait_seconds > 30 else 'high'
                     blocked_sid = block.get('blocked_session_id')
                     blocking_sid = block.get('blocking_session_id')
@@ -789,6 +793,19 @@ class DatabaseMonitor:
                     except Exception:
                         pass
 
+                    # Buscar table_name da query bloqueada para enriquecer o alerta
+                    blocked_table_name = None
+                    if blocked_hash:
+                        try:
+                            row = conn.execute(
+                                "SELECT table_name FROM queries_collected WHERE query_hash = ? LIMIT 1",
+                                [blocked_hash]
+                            ).fetchone()
+                            if row and row[0] and row[0] not in ('unknown', 'N/A'):
+                                blocked_table_name = row[0]
+                        except Exception:
+                            pass
+
                     blocking_info_dict = {
                         'blocking_session_id': int(blocking_sid or 0),
                         'blocking_query': block.get('blocking_query', '')[:500],
@@ -809,6 +826,7 @@ class DatabaseMonitor:
                         threshold_value=0.0,
                         actual_value=actual_value,
                         database_name=db_name,
+                        table_name=blocked_table_name,
                         query_preview=query_preview,
                         extra_info=blocking_info_str
                     )
@@ -823,6 +841,7 @@ class DatabaseMonitor:
                             threshold_value=0.0,
                             actual_value=actual_value,
                             database_name=db_name,
+                            table_name=blocked_table_name,
                             query_preview=query_preview,
                             extra_info=blocking_info_str
                         )

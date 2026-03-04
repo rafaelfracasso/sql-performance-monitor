@@ -544,6 +544,20 @@ async def alert_detail(request: Request, alert_id: int):
         except (json.JSONDecodeError, TypeError):
             pass
 
+    # Garantir que blocker_query_hash está resolvido — usa o valor salvo no JSON,
+    # com fallback de busca por texto se não estiver preenchido
+    if blocking_info and not blocking_info.get('blocker_query_hash'):
+        blocker_text = blocking_info.get('blocking_query', '').strip()
+        if blocker_text and blocker_text != 'N/A':
+            search_prefix = blocker_text[:120].replace('%', '\\%').replace('_', '\\_')
+            blocker_row = conn.execute("""
+                SELECT query_hash FROM queries_collected
+                WHERE query_text LIKE ? ESCAPE '\\'
+                ORDER BY collected_at DESC
+                LIMIT 1
+            """, [search_prefix + '%']).fetchone()
+            blocking_info['blocker_query_hash'] = blocker_row[0] if blocker_row else None
+
     # Buscar informações da query
     query_info = None
     if alert[3]:  # query_hash
@@ -1210,7 +1224,10 @@ async def get_query_full_text(query_hash: str):
         raise HTTPException(status_code=404)
 
     raw_query = result[0] or result[1] or "N/A"
-    formatted_query = sqlparse.format(raw_query, reindent=True, keyword_case='upper')
+    try:
+        formatted_query = sqlparse.format(raw_query, reindent=True, keyword_case='upper')
+    except Exception:
+        formatted_query = raw_query
 
     return {
         "query_hash": query_hash,
