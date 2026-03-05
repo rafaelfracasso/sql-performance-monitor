@@ -9,6 +9,9 @@
 # Database credentials (NUNCA commite este arquivo!)
 config/databases.json
 
+# Deploy de produção (contém caminhos e estrutura do servidor)
+docker-compose.prod.yml
+
 # Python
 __pycache__/
 *.py[cod]

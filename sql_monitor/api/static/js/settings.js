@@ -2,6 +2,7 @@
 const SettingsManager = {
     currentDbType: '',
     promptTypes: ['base_template', 'task_instructions', 'features', 'index_syntax'],
+    globalPromptTypes: new Set(['base_template', 'task_instructions']),
     promptTypeMap: {
         'base_template': 'base',
         'task_instructions': 'task',
@@ -941,10 +942,16 @@ const SettingsManager = {
         this.currentDbType = dbType;
         document.getElementById('prompts-editor').style.display = 'block';
         try {
-            const response = await fetch(`/api/prompts?db_type=${dbType}`);
-            const prompts = await response.json();
+            const [dbResponse, globalResponse] = await Promise.all([
+                fetch(`/api/prompts?db_type=${dbType}`),
+                fetch(`/api/prompts?db_type=global`)
+            ]);
+            const dbPrompts = await dbResponse.json();
+            const globalPrompts = await globalResponse.json();
+            // Prompts globais preenchem base_template e task_instructions; db-specificos preenchem o restante
+            const allPrompts = [...globalPrompts, ...dbPrompts];
             for (const promptType of this.promptTypes) {
-                const prompt = prompts.find(p => p.prompt_type === promptType);
+                const prompt = allPrompts.find(p => p.prompt_type === promptType);
                 const formId = `form-prompt-${this.promptTypeMap[promptType]}`;
                 const form = document.getElementById(formId);
                 if (form && prompt) {
@@ -976,7 +983,8 @@ const SettingsManager = {
                     updated_by: 'web_user'
                 };
                 try {
-                    const response = await fetch(`/api/prompts/${this.currentDbType}/${cfg.fullType}`, {
+                    const saveDbType = this.globalPromptTypes.has(cfg.fullType) ? 'global' : this.currentDbType;
+                    const response = await fetch(`/api/prompts/${saveDbType}/${cfg.fullType}`, {
                         method: 'POST', headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify(data)
                     });
@@ -1002,7 +1010,8 @@ const SettingsManager = {
             return;
         }
         try {
-            const response = await fetch(`/api/prompts/${this.currentDbType}/${promptType}/history`);
+            const historyDbType = this.globalPromptTypes.has(promptType) ? 'global' : this.currentDbType;
+            const response = await fetch(`/api/prompts/${historyDbType}/${promptType}/history`);
             const data = await response.json();
             const tbody = document.getElementById('history-table-body');
             tbody.innerHTML = data.history.map(h => `
@@ -1040,7 +1049,8 @@ const SettingsManager = {
         if (!this.currentDbType) return;
         if (!confirm(`Restaurar prompt para versao ${version}?`)) return;
         try {
-            const response = await fetch(`/api/prompts/${this.currentDbType}/${promptType}/rollback/${version}`, {
+            const rollbackDbType = this.globalPromptTypes.has(promptType) ? 'global' : this.currentDbType;
+            const response = await fetch(`/api/prompts/${rollbackDbType}/${promptType}/rollback/${version}`, {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ restored_by: 'web_user', change_reason: `Rollback para versao ${version} via UI` })
             });

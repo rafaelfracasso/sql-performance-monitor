@@ -2507,7 +2507,7 @@ async def update_weekly_optimizer_config(config: dict):
 
 # ========== PROMPTS LLM ==========
 
-VALID_DB_TYPES = {"sqlserver", "hana", "postgresql"}
+VALID_DB_TYPES = {"sqlserver", "hana", "postgresql", "global"}
 VALID_PROMPT_TYPES = {"base_template", "task_instructions", "features", "index_syntax"}
 
 

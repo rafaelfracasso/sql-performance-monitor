@@ -189,7 +189,9 @@ class LLMAnalyzer:
             """)
 
             if not results:
-                print(f"[WARN] Nenhum prompt encontrado no DuckDB, usando defaults")
+                print(f"[INFO] Nenhum prompt no DuckDB, semeando defaults...")
+                self._seed_default_prompts()
+                print(f"[INFO] Defaults gravados no DuckDB com sucesso")
                 return self._get_default_prompts()
 
             # Reconstruir estrutura do prompts.json
@@ -200,6 +202,14 @@ class LLMAnalyzer:
             }
 
             for db_type, prompt_type, name, content in results:
+                # Prompts globais nao pertencem a nenhum banco especifico
+                if db_type == 'global':
+                    if prompt_type == 'base_template' and not prompts['base_prompt_template']:
+                        prompts['base_prompt_template'] = content
+                    elif prompt_type == 'task_instructions' and not prompts['task_instructions']:
+                        prompts['task_instructions'] = content
+                    continue
+
                 if db_type not in prompts['database_prompts']:
                     prompts['database_prompts'][db_type] = {
                         'name': db_type.upper(),
@@ -210,14 +220,7 @@ class LLMAnalyzer:
 
                 db_config = prompts['database_prompts'][db_type]
 
-                # base_template e task_instructions sao globais - usar o primeiro encontrado
-                if prompt_type == 'base_template':
-                    if not prompts['base_prompt_template']:
-                        prompts['base_prompt_template'] = content
-                elif prompt_type == 'task_instructions':
-                    if not prompts['task_instructions']:
-                        prompts['task_instructions'] = content
-                elif prompt_type == 'features':
+                if prompt_type == 'features':
                     db_config['features'] = [f.strip() for f in content.split('\n') if f.strip()]
                 elif prompt_type == 'index_syntax':
                     db_config['index_syntax'] = content
@@ -236,26 +239,136 @@ class LLMAnalyzer:
             'database_prompts': {
                 'sqlserver': {
                     'name': 'SQL Server',
-                    'index_syntax': 'CREATE NONCLUSTERED INDEX IX_nome ON schema.tabela(colunas_chave) INCLUDE (colunas_include);',
-                    'features': ['Use INCLUDE para colunas no SELECT (covering index)'],
+                    'index_syntax': 'CREATE NONCLUSTERED INDEX IX_NomeDescritivo ON schema.Tabela (ColunaCriterio) INCLUDE (ColunaSelect1, ColunaSelect2);',
+                    'features': [
+                        'Prefira INDEX SEEK a INDEX SCAN — verifique seletividade das colunas filtradas',
+                        'Use colunas INCLUDE para cobrir o SELECT sem ampliar a chave do índice (covering index)',
+                        'Detecte implicit conversion: quando tipos de dados divergem no JOIN/WHERE o índice é ignorado',
+                        'Parameter sniffing: planos ruins em SPs podem exigir OPTION(RECOMPILE) ou OPTIMIZE FOR',
+                        'Evite funções sobre colunas indexadas no WHERE (ex: YEAR(data) = 2024 impede seek)',
+                        'Leituras físicas altas indicam pressão de memória — verifique buffer pool e tamanho do working set',
+                        'Logical reads muito acima do esperado para o rowcount sugerem varredura desnecessária ou índice ausente',
+                        'Writes altos em SELECT podem indicar spill para tempdb (sort/hash) — verifique concessão de memória',
+                        'Bloqueios frequentes: considere READ_COMMITTED_SNAPSHOT ou revisão da granularidade de transações',
+                        'Estatísticas desatualizadas distorcem o plano — verifique data do último UPDATE STATISTICS'
+                    ],
                     'metrics_note': ''
                 },
                 'hana': {
                     'name': 'SAP HANA',
-                    'index_syntax': 'CREATE INDEX idx_nome ON "SCHEMA"."TABELA" (coluna1, coluna2);',
-                    'features': ['HANA usa COLUMN STORE por padrão'],
+                    'index_syntax': 'CREATE INDEX idx_NomeDescritivo ON "SCHEMA"."TABELA" (coluna1, coluna2);',
+                    'features': [
+                        'HANA usa Column Store por padrão — JOINs e agregações são naturalmente eficientes',
+                        'Row Store é adequado apenas para tabelas OLTP com acesso por chave primária',
+                        'Evite funções sobre colunas no WHERE — impedem uso do dictionary compression e pushdown',
+                        'Prefira projeção mínima no SELECT — Column Store carrega apenas as colunas necessárias',
+                        'Particionamento por hash ou range pode reduzir drasticamente varreduras em tabelas grandes',
+                        'Memory consumption alto pode indicar ausência de compressão delta merge',
+                        'Delta merge frequente sugere alto volume de DML — ajuste merge threshold',
+                        'Joins entre Row Store e Column Store são custosos — mantenha tipos consistentes'
+                    ],
                     'metrics_note': ''
                 },
                 'postgresql': {
                     'name': 'PostgreSQL',
-                    'index_syntax': 'CREATE INDEX idx_nome ON schema.tabela (coluna1, coluna2);',
-                    'features': ['Use INCLUDE para covering indexes (PostgreSQL 11+)'],
+                    'index_syntax': 'CREATE INDEX CONCURRENTLY idx_NomeDescritivo ON schema.tabela (coluna1, coluna2) INCLUDE (coluna_select);',
+                    'features': [
+                        'Use EXPLAIN (ANALYZE, BUFFERS) para identificar Seq Scan vs Index Scan',
+                        'Índices parciais (WHERE na criação) reduzem tamanho e aumentam seletividade',
+                        'INCLUDE em índices disponível desde PostgreSQL 11 — use para covering indexes',
+                        'Estatísticas desatualizadas causam planos ruins — verifique autovacuum e execute ANALYZE',
+                        'Seq Scan em tabelas grandes com filtro seletivo indica índice ausente ou estatística ruim',
+                        'Hash Join eficiente para grandes conjuntos sem ordenação; Merge Join exige dados ordenados',
+                        'work_mem baixo causa spill para disco em sort e hash — ajuste por sessão se necessário',
+                        'Bloat de tabelas e índices degrada performance — monitore e execute VACUUM FULL criteriosamente',
+                        'Conexões excessivas consomem memória — considere PgBouncer para pooling'
+                    ],
                     'metrics_note': ''
                 }
             },
-            'base_prompt_template': 'Voce e um especialista em otimizacao de performance de {db_name}.',
-            'task_instructions': 'Forneca sugestoes de otimizacao.'
+            'base_prompt_template': (
+                'Voce e um especialista em otimizacao de performance de {db_name}.\n'
+                'Analise a query abaixo com base nas metricas de execucao e na estrutura do banco fornecidas.\n\n'
+                '## QUERY ANALISADA\n'
+                '```sql\n{query}\n```\n\n'
+                '## PARAMETROS (valores reais substituidos por placeholders)\n'
+                '{placeholders}\n\n'
+                '## METRICAS DE EXECUCAO\n'
+                '- Duracao media: {duration_s:.2f}s\n'
+                '- CPU medio: {cpu_ms:.0f}ms\n'
+                '- Logical reads medio: {logical_reads:.0f}\n'
+                '- Physical reads medio: {physical_reads:.0f}\n'
+                '- Writes medio: {writes:.0f}\n'
+                '- Total de execucoes coletadas: {exec_count}\n'
+                '{metrics_note}\n\n'
+                '## ESTRUTURA DA TABELA (DDL)\n'
+                '```sql\n{ddl}\n```\n\n'
+                '## INDICES EXISTENTES\n'
+                '```sql\n{indexes}\n```\n\n'
+            ),
+            'task_instructions': (
+                '## SUA TAREFA\n'
+                'Com base em tudo acima, forneca uma analise objetiva e acionavel para {db_name}.\n\n'
+                'Considere as caracteristicas do banco:\n{features}\n\n'
+                'Sintaxe de indice para este banco:\n```sql\n{index_syntax}\n```\n\n'
+                'IMPORTANTE: Responda EXATAMENTE no formato abaixo, usando os marcadores indicados.\n'
+                'Nao adicione texto fora das secoes.\n\n'
+                '[EXPLICAÇÃO]\n'
+                'Explique em 3-5 frases o principal gargalo identificado na query. '
+                'Seja especifico: cite colunas, indices, tipos de operacao (scan, seek, spill, etc).\n\n'
+                '[SUGESTÕES]\n'
+                'Liste de 1 a 4 acoes corretivas priorizadas. Para cada uma:\n'
+                '- Descreva a acao (ex: criar indice, reescrever subquery, atualizar estatisticas)\n'
+                '- Inclua o comando SQL quando aplicavel\n'
+                '- Estime o impacto esperado (ex: eliminaria physical reads, reduziria CPU em ~X%)\n\n'
+                '[PRIORIDADE]\n'
+                'Uma palavra: CRITICO, ALTO, MEDIO ou BAIXO\n\n'
+                '[JUSTIFICATIVA]\n'
+                'Uma frase justificando a prioridade com base nas metricas (ex: physical reads altos '
+                'indicam ausencia de dados em cache e impacto direto em IO do servidor).\n'
+            )
         }
+
+    def _seed_default_prompts(self):
+        """Grava os prompts default no DuckDB na primeira execução."""
+        defaults = self._get_default_prompts()
+
+        # Prompts globais (db_type='global' = compartilhado por todos os SGBDs)
+        self.metrics_store.save_llm_prompt(
+            db_type='global',
+            prompt_type='base_template',
+            name='Template Base',
+            content=defaults['base_prompt_template'],
+            updated_by='system',
+            change_reason='Seed inicial'
+        )
+        self.metrics_store.save_llm_prompt(
+            db_type='global',
+            prompt_type='task_instructions',
+            name='Instrucoes da Tarefa',
+            content=defaults['task_instructions'],
+            updated_by='system',
+            change_reason='Seed inicial'
+        )
+
+        # Prompts por tipo de banco
+        for db_type, db_config in defaults['database_prompts'].items():
+            self.metrics_store.save_llm_prompt(
+                db_type=db_type,
+                prompt_type='features',
+                name=f'Features {db_config["name"]}',
+                content='\n'.join(db_config['features']),
+                updated_by='system',
+                change_reason='Seed inicial'
+            )
+            self.metrics_store.save_llm_prompt(
+                db_type=db_type,
+                prompt_type='index_syntax',
+                name=f'Sintaxe de Index {db_config["name"]}',
+                content=db_config['index_syntax'],
+                updated_by='system',
+                change_reason='Seed inicial'
+            )
 
     def reload_prompts_if_changed(self):
         """
